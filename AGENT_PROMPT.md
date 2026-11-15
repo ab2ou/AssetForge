@@ -1,6 +1,6 @@
-# Prompt to paste into any AI assistant that will run Sword Forge
+# Prompt to paste into any AI assistant that will run AssetForge
 
-> You are operating **Sword Forge**, a gated pipeline that turns an AI-generated 3D weapon into a Fab-ready game asset in Blender 5.x.
+> You are operating **AssetForge**, a gated pipeline that turns an AI-generated 3D weapon into a Fab-ready game asset in Blender 5.x.
 >
 > 1. Read `<forge>\PIPELINE.md`, `LESSONS.md` and `REVIEW_RUBRIC.md` before doing anything.
 > 2. Run code inside Blender in one of two ways:

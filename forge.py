@@ -1,4 +1,4 @@
-"""Sword Forge loader (shared core for the add-on, the CLI and MCP calls).
+"""AssetForge loader (shared core for the add-on, the CLI and MCP calls).
 
     FORGE_DIR = r"<path to this folder>"     # optional once setup_forge.py has run (or env FORGE_DIR is set)
     exec(open(FORGE_DIR + "/forge.py", encoding="utf-8").read())
@@ -11,14 +11,14 @@ import os, json, sys
 
 def _find_forge_dir():
     """the code folder: FORGE_DIR set before exec > env FORGE_DIR > folder of the running script > the path stored in
-    ~/.sword_forge_dir by setup_forge.py."""
+    ~/.assetforge_dir by setup_forge.py."""
     cands = [globals().get("FORGE_DIR"), os.environ.get("FORGE_DIR")]
     if globals().get("__file__"): cands.append(os.path.dirname(os.path.abspath(globals()["__file__"])))
-    ptr = os.path.join(os.path.expanduser("~"), ".sword_forge_dir")
+    ptr = os.path.join(os.path.expanduser("~"), ".assetforge_dir")
     if os.path.exists(ptr): cands.append(open(ptr, encoding="utf-8").read().strip())
     for c in cands:
         if c and os.path.isfile(os.path.join(c, "forge_core.py")): return os.path.abspath(c)
-    raise RuntimeError("Sword Forge folder not found: set FORGE_DIR before exec(...), set the environment variable "
+    raise RuntimeError("AssetForge folder not found: set FORGE_DIR before exec(...), set the environment variable "
                        "FORGE_DIR, or run setup_forge.py once")
 
 

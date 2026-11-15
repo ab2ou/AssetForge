@@ -1,6 +1,6 @@
 # Third-party software
 
-Sword Forge does not ship any third-party code. It runs inside Blender and uses these libraries:
+AssetForge does not ship any third-party code. It runs inside Blender and uses these libraries:
 
 | software | used for | licence | how it gets there |
 |---|---|---|---|

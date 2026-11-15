@@ -1631,7 +1631,7 @@ def uv_regions(co, tv, anatomy, zones=(), sharp_deg=45.0):
 
 def forge_unwrap(name, tex=4096, pad_px=16, hard_deg=45.0, uv_name="UV_game", anatomy=None, G=2048, protect_zones=None,
                  coverage_try=None, log=print):
-    """the Sword Forge UV recipe (port of the container tools that reached 74 %): class-restricted normal-cone charts
+    """the AssetForge UV recipe (port of the container tools that reached 74 %): class-restricted normal-cone charts
     -> LSCM -> split/repair until no flips or overlaps -> merge small charts -> FFT packing with a Euclidean padding.
     Then smooth shading with hard edges only on seams (> hard_deg) and weighted normals."""
     t0 = time.time(); ob = bpy.data.objects[name]; me = ob.data

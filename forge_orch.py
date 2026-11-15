@@ -1,4 +1,4 @@
-"""Sword Forge orchestrator - runs OUTSIDE Blender (any Python 3, e.g. Blender's own python.exe).
+"""AssetForge orchestrator - runs OUTSIDE Blender (any Python 3, e.g. Blender's own python.exe).
 
 Each step runs in a fresh headless Blender (`blender -b work.blend -P forge_cli.py -- fn json --save`):
 no viewport, no UI freeze, no 60 s limit, a crash only kills that step.
@@ -24,7 +24,7 @@ FORGE = os.path.dirname(os.path.abspath(__file__))
 try: _LOCAL = json.load(open(os.path.join(FORGE, "paths.local.json"), encoding="utf-8"))   # see paths.example.json
 except Exception: _LOCAL = {}
 PROJECTS = os.path.expanduser(os.environ.get("FORGE_PROJECTS") or _LOCAL.get("projects_root")
-                              or os.path.join("~", "SwordForge", "projects"))
+                              or os.path.join("~", "AssetForge", "projects"))
 BLENDER = _LOCAL.get("blender") or os.environ.get("BLENDER") or "blender"
 MIN_FREE_GB = {}
 for _d, _need in ((FORGE, 3.0), (PROJECTS, 15.0)):        # free space on the code drive and on the projects drive

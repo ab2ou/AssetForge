@@ -1,4 +1,4 @@
-# Sword Forge — from an AI-generated sword to a Fab product
+# AssetForge — from an AI-generated sword to a Fab product
 
 Read this whole file before touching Blender. It is written for any assistant (Claude, ChatGPT, Gemini, Codex…) and for a human.
 
@@ -113,7 +113,7 @@ Textures: 4K with a 2K copy. Padding 16 px at 4K. UV coverage 0.65–0.78 is nor
 
 
 ## Control panel (no AI needed)
-3D View > press N > tab **Sword Forge**. Choose the project; press ▶ on a stage (or "Run from selected until a REVIEW");
+3D View > press N > tab **AssetForge**. Choose the project; press ▶ on a stage (or "Run from selected until a REVIEW");
 when it stops at REVIEW, select the stage, look at the images (thumbnails / Report page), write a note, press the
 approve button, then run the next stage. New weapon: "New project" box (name + AI file) > Create + import.
 Long stages (UV ~35 min, gallery ~10 min) run in the background; the panel shows "Running" and the log.

@@ -1,5 +1,5 @@
 @echo off
-REM Sword Forge - run or resume a queue without any AI.  Usage: run_forge.bat <queue.json>
+REM AssetForge - run or resume a queue without any AI.  Usage: run_forge.bat <queue.json>
 REM BLENDER_PY = Blender's own python.exe (default: python on PATH)
 set QUEUE=%~1
 if "%QUEUE%"=="" (echo usage: run_forge.bat queue.json & pause & exit /b 1)

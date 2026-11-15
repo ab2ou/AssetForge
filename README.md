@@ -1,8 +1,8 @@
-# Sword Forge
+# AssetForge
 
 **From an AI-generated sword to a game-ready product, with a quality gate after every step.**
 
-Sword Forge is a Blender pipeline that takes a raw high-poly sword from an AI 3D generator and produces a
+AssetForge is a Blender pipeline that takes a raw high-poly sword from an AI 3D generator and produces a
 game asset ready for a marketplace such as Fab: a cleaned high poly, a low poly with LODs and collision, UVs, baked 4K/2K PBR
 textures, FBX/GLB/OBJ/Blend exports, a render gallery and packaged zips.
 
@@ -41,10 +41,10 @@ Details, thresholds and the reasons behind them: [PIPELINE.md](PIPELINE.md), [LE
    ```
    "<Blender folder>/5.2/python/bin/python.exe" setup_forge.py --projects D:/Forge/projects
    ```
-   It remembers the code folder (`~/.sword_forge_dir`), writes `paths.local.json` (see `paths.example.json`) and
+   It remembers the code folder (`~/.assetforge_dir`), writes `paths.local.json` (see `paths.example.json`) and
    installs [PyMeshLab](https://github.com/cnr-isti-vclab/PyMeshLab) into `./pylibs`.
 3. Optional control panel: *Edit > Preferences > Add-ons > Install from Disk >* `forge_addon.py`, then press `N` in the
-   3D view, tab **Sword Forge**.
+   3D view, tab **AssetForge**.
 4. Check the install:
    ```
    "<Blender folder>/5.2/python/bin/python.exe" tests/run_selftest.py
@@ -103,7 +103,7 @@ tests/              self-test         experiments/legacy_tests/   historical val
 
 ## License
 
-Sword Forge is free software under the [GNU General Public License v3.0 or later](LICENSE).
+AssetForge is free software under the [GNU General Public License v3.0 or later](LICENSE).
 Third-party software it uses (Blender, PyMeshLab, NumPy, optional MeshLib) is listed in
 [THIRD_PARTY.md](THIRD_PARTY.md). The optional MeshLib engine is free for non-commercial use only. It is not installed
 by default and the pipeline does not need it.
@@ -114,6 +114,6 @@ Copyright (C) 2026 ab2ou
 
 ### بالعربية
 
-Sword Forge نظام داخل بلندر يحوّل سيفاً مولّداً بالذكاء الاصطناعي إلى منتج جاهز للألعاب والبيع: تنظيف الهاي بولي،
+AssetForge نظام داخل بلندر يحوّل سيفاً مولّداً بالذكاء الاصطناعي إلى منتج جاهز للألعاب والبيع: تنظيف الهاي بولي،
 لو بولي مع LODs، UV، خرائط 4K، تصدير، معرض صور، وحزم مضغوطة. بعد كل مرحلة بوابة فحص (PASS / REVIEW / FAIL)،
 ولا تبدأ مرحلة فوق مرحلة فاشلة أو غير معتمدة. التثبيت: شغّل `setup_forge.py` ببايثون بلندر، ثم `tests/run_selftest.py` للتأكد.

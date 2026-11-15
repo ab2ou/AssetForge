@@ -1,4 +1,4 @@
-"""One-time setup of Sword Forge on a machine.
+"""One-time setup of AssetForge on a machine.
 
 Run it with Blender's own Python, so the installed libraries match Blender's Python version:
 
@@ -7,33 +7,33 @@ Run it with Blender's own Python, so the installed libraries match Blender's Pyt
     blender -b --python setup_forge.py -- --projects D:/Forge/projects
 
 It
-  1. remembers where this folder is (~/.sword_forge_dir), so forge.py, the CLI and the add-on find the code;
+  1. remembers where this folder is (~/.assetforge_dir), so forge.py, the CLI and the add-on find the code;
   2. writes paths.local.json (projects folder, ledger, blender executable) - see paths.example.json;
   3. installs the libraries of requirements.txt (pymeshlab) into ./pylibs.
 
---meshlib also installs MeshLib, an optional voxel engine (high_cleanup.engine = "meshlib"). Sword Forge does not need
+--meshlib also installs MeshLib, an optional voxel engine (high_cleanup.engine = "meshlib"). AssetForge does not need
 it, and its free licence covers non-commercial use only.
 """
 import argparse, json, os, subprocess, sys
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 argv = sys.argv[sys.argv.index("--") + 1:] if "--" in sys.argv else sys.argv[1:]
-ap = argparse.ArgumentParser(description="Sword Forge setup")
-ap.add_argument("--projects", help="folder for the projects (default: ~/SwordForge/projects)")
+ap = argparse.ArgumentParser(description="AssetForge setup")
+ap.add_argument("--projects", help="folder for the projects (default: ~/AssetForge/projects)")
 ap.add_argument("--blender", help="blender executable used by the orchestrator")
 ap.add_argument("--no-deps", action="store_true", help="do not install Python libraries")
 ap.add_argument("--meshlib", action="store_true", help="also install MeshLib (non-commercial licence)")
 a = ap.parse_args(argv)
 
 # 1. where the code is
-with open(os.path.join(os.path.expanduser("~"), ".sword_forge_dir"), "w", encoding="utf-8") as f:
+with open(os.path.join(os.path.expanduser("~"), ".assetforge_dir"), "w", encoding="utf-8") as f:
     f.write(HERE)
 
 # 2. machine paths
 lp = os.path.join(HERE, "paths.local.json")
 P = json.load(open(lp, encoding="utf-8")) if os.path.exists(lp) else {}
 if a.projects: P["projects_root"] = os.path.abspath(os.path.expanduser(a.projects))
-P.setdefault("projects_root", os.path.join(os.path.expanduser("~"), "SwordForge", "projects"))
+P.setdefault("projects_root", os.path.join(os.path.expanduser("~"), "AssetForge", "projects"))
 P.setdefault("ledger", os.path.join(os.path.dirname(P["projects_root"]), "forge_ledger.jsonl"))
 if a.blender:
     P["blender"] = os.path.abspath(a.blender)
@@ -62,6 +62,6 @@ if not a.no_deps:
         print("MeshLib: free for non-commercial use only; a commercial licence is needed for commercial work")
         subprocess.check_call([py, "-m", "pip", "install", "--upgrade", "--target", target, "meshlib"])
 
-print("\nSword Forge is set up. Next:")
-print("  - Blender: Edit > Preferences > Add-ons > Install from Disk > forge_addon.py (tab 'Sword Forge', N panel)")
+print("\nAssetForge is set up. Next:")
+print("  - Blender: Edit > Preferences > Add-ons > Install from Disk > forge_addon.py (tab 'AssetForge', N panel)")
 print("  - self-test:", f'"{sys.executable}" "{os.path.join(HERE, "tests", "run_selftest.py")}"')

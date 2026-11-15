@@ -1,21 +1,21 @@
-bl_info = {"name": "Sword Forge", "author": "Blender AI Studio", "version": (2, 1, 0), "blender": (5, 2, 0),
-           "location": "3D View > Sidebar (N) > Sword Forge", "description": "Control panel for the Sword Forge pipeline: swords and any other model (no AI needed)",
+bl_info = {"name": "AssetForge", "author": "Blender AI Studio", "version": (2, 1, 0), "blender": (5, 2, 0),
+           "location": "3D View > Sidebar (N) > AssetForge", "description": "Control panel for the AssetForge pipeline: swords and any other model (no AI needed)",
            "category": "Pipeline"}
-"""Sword Forge control panel 2.0 (2026-10-31).
+"""AssetForge control panel 2.0 (2026-10-31).
 Control only: the production logic stays in forge/*.py. Every stage runs in a separate headless Blender through the
 orchestrator (forge_orch.py: lock, backup of the .blend before each step, retries, journal), so this Blender never
 freezes and a crash only stops that step. The panel reads state.json / reports/<stage>/decision.json to show the
 status, the failed or to-review checks with their messages, and the images to look at; Approve writes the same
 record as Project.approve().
 2.1 (2026-11-03): main card with progress and one "what to do now" button; Review, Stages, New project and Options are fold-out sub-panels (same buttons and settings as 2.0).
-Install: Edit > Preferences > Add-ons > Install from Disk > forge_addon.py, then press N in the 3D view, tab "Sword Forge" (the tab "Forge" belongs to ForgeMaterial Studio).
+Install: Edit > Preferences > Add-ons > Install from Disk > forge_addon.py, then press N in the 3D view, tab "AssetForge" (the tab "Forge" belongs to ForgeMaterial Studio).
 UI text is English: Blender's interface does not shape Arabic letters."""
 import bpy, os, sys, json, time, subprocess
 
 def _forge_dir():
-    """code folder: env FORGE_DIR > ~/.sword_forge_dir (written by setup_forge.py) > the folder of this file."""
+    """code folder: env FORGE_DIR > ~/.assetforge_dir (written by setup_forge.py) > the folder of this file."""
     cands = [os.environ.get("FORGE_DIR")]
-    ptr = os.path.join(os.path.expanduser("~"), ".sword_forge_dir")
+    ptr = os.path.join(os.path.expanduser("~"), ".assetforge_dir")
     if os.path.exists(ptr): cands.append(open(ptr, encoding="utf-8").read().strip())
     cands.append(os.path.dirname(os.path.abspath(__file__)))
     for c in cands:
@@ -27,7 +27,7 @@ def _local_paths(forge):
     try: p = json.load(open(os.path.join(forge, "paths.local.json"), encoding="utf-8"))
     except Exception: p = {}
     env = os.environ.get("FORGE_PROJECTS")
-    root = os.path.expanduser(env or p.get("projects_root") or os.path.join("~", "SwordForge", "projects"))
+    root = os.path.expanduser(env or p.get("projects_root") or os.path.join("~", "AssetForge", "projects"))
     led = None if env else p.get("ledger")
     return root, os.path.expanduser(led or os.path.join(os.path.dirname(root), "forge_ledger.jsonl"))
 
@@ -353,7 +353,7 @@ _ICON = {"PASS": "CHECKMARK", "FAIL": "CANCEL", "REVIEW": "ERROR", "STALE": "TIM
 
 
 def _ui_state(ctx):
-    # 2.1: what every Sword Forge panel reads: props, project folder, state.json, is a job running
+    # 2.1: what every AssetForge panel reads: props, project folder, state.json, is a job running
     f = ctx.scene.forge
     root = os.path.join(PROJECTS, f.project) if f.project else ""
     S = (_read(os.path.join(root, "state.json"), {}) or {}) if root else {}
@@ -373,7 +373,7 @@ def _big(layout, scale=1.5):
 
 class FORGE_PT_panel(bpy.types.Panel):
     # 2.1: main card = project, progress and ONE "what to do now" button; the rest lives in the sub-panels below
-    bl_label = "Sword Forge"; bl_space_type = "VIEW_3D"; bl_region_type = "UI"; bl_category = "Sword Forge"
+    bl_label = "AssetForge"; bl_space_type = "VIEW_3D"; bl_region_type = "UI"; bl_category = "AssetForge"
 
     def draw(self, ctx):
         L = self.layout; f, root, S, run = _ui_state(ctx)
@@ -427,7 +427,7 @@ class FORGE_PT_panel(bpy.types.Panel):
 
 
 class FORGE_PT_review(bpy.types.Panel):
-    bl_label = "Review"; bl_space_type = "VIEW_3D"; bl_region_type = "UI"; bl_category = "Sword Forge"
+    bl_label = "Review"; bl_space_type = "VIEW_3D"; bl_region_type = "UI"; bl_category = "AssetForge"
     bl_parent_id = "FORGE_PT_panel"
 
     @classmethod
@@ -477,7 +477,7 @@ class FORGE_PT_review(bpy.types.Panel):
 
 
 class FORGE_PT_stages(bpy.types.Panel):
-    bl_label = "Stages"; bl_space_type = "VIEW_3D"; bl_region_type = "UI"; bl_category = "Sword Forge"
+    bl_label = "Stages"; bl_space_type = "VIEW_3D"; bl_region_type = "UI"; bl_category = "AssetForge"
     bl_parent_id = "FORGE_PT_panel"
 
     @classmethod
@@ -509,7 +509,7 @@ class FORGE_PT_stages(bpy.types.Panel):
 
 
 class FORGE_PT_new(bpy.types.Panel):
-    bl_label = "New project"; bl_space_type = "VIEW_3D"; bl_region_type = "UI"; bl_category = "Sword Forge"
+    bl_label = "New project"; bl_space_type = "VIEW_3D"; bl_region_type = "UI"; bl_category = "AssetForge"
     bl_parent_id = "FORGE_PT_panel"; bl_options = {"DEFAULT_CLOSED"}
 
     def draw_header(self, ctx): self.layout.label(text="", icon="ADD")
@@ -532,7 +532,7 @@ class FORGE_PT_new(bpy.types.Panel):
 
 
 class FORGE_PT_options(bpy.types.Panel):
-    bl_label = "Options"; bl_space_type = "VIEW_3D"; bl_region_type = "UI"; bl_category = "Sword Forge"
+    bl_label = "Options"; bl_space_type = "VIEW_3D"; bl_region_type = "UI"; bl_category = "AssetForge"
     bl_parent_id = "FORGE_PT_panel"; bl_options = {"DEFAULT_CLOSED"}
 
     def draw_header(self, ctx): self.layout.label(text="", icon="PREFERENCES")

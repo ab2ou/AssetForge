@@ -1,11 +1,11 @@
-# Developing Sword Forge (rules for any AI or person)
+# Developing AssetForge (rules for any AI or person)
 
-Sword Forge is meant to get better with every weapon it produces. Any assistant that uses it may also improve it, but only this way.
+AssetForge is meant to get better with every weapon it produces. Any assistant that uses it may also improve it, but only this way.
 
 ## 0. Evidence first: a live test beats any general knowledge
 
 A change counts only when a run here proves it. "Experts recommend X", "it is best practice", "I read that…" is not a
-reason to change Sword Forge. It is an **idea** until it has been tried on a real or test sword and measured.
+reason to change AssetForge. It is an **idea** until it has been tried on a real or test sword and measured.
 
 - **Ideas** (untested): `record_lesson("idea", title, what)`. They are stored and flagged `tested: false`. They never
   change the code or the thresholds.

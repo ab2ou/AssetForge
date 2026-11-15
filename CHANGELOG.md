@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.6.2 (2026-11-15) — project renamed to AssetForge
+- The project is renamed from "Sword Forge" to **AssetForge**, to match what it has done since 1.6.0: run on any model, not only swords. No pipeline behaviour changed; this is a branding/paths rename only.
+- Renamed: repo folder, README/PIPELINE/ROADMAP/CONTRIBUTING/THIRD_PARTY/AGENT_PROMPT titles, the add-on's bl_info name and N-panel tab label, the default projects folder (`~/SwordForge/projects` -> `~/AssetForge/projects` for new setups), and the installer pointer file (`~/.sword_forge_dir` -> `~/.assetforge_dir`).
+- Earlier changelog entries below still say "Sword Forge" because that was the project's name at the time; left as-is for an accurate history.
+
+
 ## 1.5.0 (2026-11-03) — voxel clean-up + QEM low poly by default (exp_20261103_234813_266b)
 - `voxel_cleanup(project)`: AI high polys are rebuilt through a MeshLib signed-distance voxel grid (0.00071 × length, 0.7 mm on a 1 m sword), floating parts removed, Taubin smoothing (15). Runs automatically at the first `s1_highpoly` of a NEW project (`config high_cleanup.method = "voxel"`; per project opt-out: setting `no_high_cleanup`). The textured original is kept hidden as `settings.texture_source`; the design baseline is re-written. User decision: result over fidelity (silver_fang benchmark of 32 methods, <scratch>\forge_ui21\cgpt).
 - Low poly default `lowpoly.method = "qem"`: PyMeshLab quadric decimation (quality 0.2, no topology lock, no planar quadric) + repair only where needed (`_qem_copy`, `_qem_fix`), in `s2_lowpoly` and `s2_auto`.

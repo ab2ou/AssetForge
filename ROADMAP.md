@@ -1,4 +1,4 @@
-# Sword Forge — status of each part (keep this honest)
+# AssetForge — status of each part (keep this honest)
 
 > 2026-11-15: s0 → s9 ran end to end on a real AI sword (silver_fang, 2026-11-04). Rows below not updated since are older.
 

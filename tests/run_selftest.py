@@ -18,7 +18,7 @@ def opt(name, default=None):
 try: local = json.load(open(os.path.join(FORGE, "paths.local.json"), encoding="utf-8"))
 except Exception: local = {}
 blender = opt("--blender") or local.get("blender") or os.environ.get("BLENDER") or "blender"
-root = tempfile.mkdtemp(prefix="sword_forge_selftest_"); projects = os.path.join(root, "projects")
+root = tempfile.mkdtemp(prefix="assetforge_selftest_"); projects = os.path.join(root, "projects")
 
 qname = "selftest_generic_queue.json" if "--generic" in args else "selftest_queue.json"   # --generic: a non-weapon asset
 Q = json.load(open(os.path.join(HERE, qname), encoding="utf-8")); Q["blender"] = blender

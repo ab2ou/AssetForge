@@ -13,11 +13,11 @@ FORGE_DIR = globals().get("FORGE_DIR") or os.path.dirname(os.path.abspath(__file
 
 def load_paths():
     """machine paths, kept out of the method (and out of the evidence manifest): paths.local.json next to the code,
-    see paths.example.json. Default: ~/SwordForge/projects with the ledger beside it."""
+    see paths.example.json. Default: ~/AssetForge/projects with the ledger beside it."""
     try: p = json.load(open(os.path.join(FORGE_DIR, "paths.local.json"), encoding="utf-8"))
     except Exception: p = {}
     env = os.environ.get("FORGE_PROJECTS")                      # e.g. the self-test runs in a temporary folder
-    root = os.path.expanduser(env or p.get("projects_root") or os.path.join("~", "SwordForge", "projects"))
+    root = os.path.expanduser(env or p.get("projects_root") or os.path.join("~", "AssetForge", "projects"))
     led = None if env else p.get("ledger")
     return {"projects_root": root, "blender": p.get("blender") or "blender",
             "ledger": os.path.expanduser(led or os.path.join(os.path.dirname(root), "forge_ledger.jsonl"))}
