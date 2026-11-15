@@ -92,7 +92,8 @@ def _scene_candidates(self, ctx):
 
 def _weapon_types(self, ctx):
     p = _read(os.path.join(FORGE_DIR, "weapon_profiles.json"), {}) or {}
-    return [(k, k, "") for k in sorted(p.get("types", {}))] or [("arming_sword", "arming_sword", "")]
+    return ([(k, k, "") for k in sorted(p.get("types", {}))] or [("arming_sword", "arming_sword", "")]) + \
+        [("generic", "any other model (not a weapon)", "props, furniture, armour, creatures...: generic cameras and checks")]
 
 
 def _status(S, st):
@@ -124,7 +125,8 @@ def _steps_for(stage, f, S):
     """orchestrator steps for one stage (the last step of a gate is verified against its report)."""
     pj = f.project; k = {"project": pj}
     if stage == "s0_intake":
-        return [{"fn": "s0_import", "kw": dict(k, path=bpy.path.abspath(f.source), title=f.title or None), "verify_stage": "s0_intake"}]
+        return [{"fn": "s0_import", "kw": dict(k, path=bpy.path.abspath(f.source), title=f.title or None,
+                                                kind="generic" if f.weapon_type == "generic" else "weapon"), "verify_stage": "s0_intake"}]
     if stage == "s0_spec":
         return [{"fn": "s0_spec", "kw": dict(k, weapon_type=f.weapon_type, style=f.style), "verify_stage": "s0_spec"}]
     if stage == "s2_lowpoly":
@@ -244,7 +246,8 @@ class FORGE_OT_new(bpy.types.Operator):
                 for d in dup:
                     me = d.data; bpy.data.objects.remove(d, do_unlink=True)
                     if me.users == 0: bpy.data.meshes.remove(me)
-            steps_override = {"s0_intake": [{"fn": "s0_adopt", "kw": {"project": n, "high_names": new_names, "title": f.title or None},
+            steps_override = {"s0_intake": [{"fn": "s0_adopt", "kw": {"project": n, "high_names": new_names, "title": f.title or None,
+                                                                         "kind": "generic" if f.weapon_type == "generic" else "weapon"},
                                              "verify_stage": "s0_intake"}]}
         else:
             src = bpy.path.abspath(f.source)

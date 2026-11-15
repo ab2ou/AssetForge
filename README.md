@@ -10,9 +10,9 @@ Every stage ends with a **gate**: measured checks that are `PASS`, `FAIL` or `RE
 a stage that failed or that a person has not approved. Code changes are accepted only with measured
 evidence from a live run (`record_experiment`). See [CONTRIBUTING.md](CONTRIBUTING.md).
 
-> Status: works end to end on swords (arming sword, longsword, greatsword, sabre, katana…). Part detection, inspection cameras,
-> weapon specs and gallery shots assume a long bladed weapon; other assets are on the [roadmap](ROADMAP.md).
-> Tested on Windows with Blender 5.2.2.
+> Status: built for swords (part detection, weapon specs, sword cameras), and since 1.6.0 any other model runs through the
+> same stages as a **generic** asset: cameras from its bounding box, a size check instead of weapon specs, one UV region.
+> The generic path is tested end to end on a procedural model, not yet on many real AI assets. Windows, Blender 5.2.2.
 
 ## Stages
 
@@ -50,7 +50,7 @@ Details, thresholds and the reasons behind them: [PIPELINE.md](PIPELINE.md), [LE
    "<Blender folder>/5.2/python/bin/python.exe" tests/run_selftest.py
    ```
    It builds a procedural sword in a temporary folder, runs it from import to low poly with the orchestrator,
-   injects one crash that must be retried, and prints a summary (exit code 0 = OK).
+   injects one crash that must be retried, and prints a summary (exit code 0 = OK). Add `--generic` for the non-weapon test.
 
 ## Use
 
@@ -63,6 +63,9 @@ exec(open(r"<forge folder>/forge.py", encoding="utf-8").read())
 s0_import("my_sword", r"D:/ai/my_sword.glb")
 s0_spec("my_sword", weapon_type="longsword", style="fantasy")
 status("my_sword")
+
+s0_import("my_chair", r"D:/ai/chair.glb", kind="generic")     # any model that is not a long weapon
+s0_spec("my_chair", size_m=0.95)                              # real size of its largest side, in metres
 ```
 
 **Headless** (one stage per Blender process; exit code 0 = PASS/REVIEW, 2 = FAIL, 3 = error, 4 = refused):

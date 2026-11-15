@@ -292,3 +292,14 @@ at 22k), quad display topology (tested after 1.4.2: rejected, LESSON 59), the re
 - s0_spec: an automatically corrected or undeclared weapon type is REVIEW, never a silent PASS (1.5.1 made it PASS; a small weapon imported too large would have been relabelled without a warning).
 - Historical validation scripts moved to `experiments/legacy_tests/`; local paths in history files replaced by placeholders.
 - Manifest md5 ignores line endings (`file_md5`), so a git checkout with CRLF or LF stays "tested"; text files stored with LF. Experiments exp_20261115_145611_acd6 and exp_20261115_145902_14ad.
+
+## 1.6.0 (2026-11-15) — any model, not only weapons (exp_20261115_202550_5e9c)
+- New asset kind `generic` next to `weapon`: `s0_import(project, path, kind="auto" | "weapon" | "generic")`, `s0_adopt(..., kind=)`.
+  `auto` guesses from the proportions (longest side >= 2.5 x the next one = weapon) and shows the guess as REVIEW. In the panel: type "any other model".
+- Generic assets: kept upright as imported (base on Z = 0, pivot at the centre of the base); cameras from the bounding box
+  (front, back, sides, top, three-quarter, four close-ups); `s0_spec(project, size_m=...)` checks the real size and renders
+  the asset beside a character (weapon measurements skipped); one UV region `body`; gallery shots from the generic cameras.
+- Voxel clean-up: for generic assets the voxel comes from the surface area (about 1.2 M triangles); open meshes get their
+  holes capped first when the rebuild would lose surface; new s1 check `cleanup_kept_shape` (REVIEW above 0.5 % lost, FAIL above 5 %).
+- Tested s0 → s9 on a procedural non-weapon (`selftest_make_generic`, `tests/run_selftest.py --generic`). Swords: identical numbers on silver_fang.
+- Known limits: not yet run on a real AI-generated non-weapon; no part detection for generic assets (one region); look painting and listing text are still written for swords.

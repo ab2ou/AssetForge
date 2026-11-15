@@ -766,10 +766,10 @@ def uv_diag_pngs(co, tv, uvt, out_prefix, res=2048, regions=None, gap_px_at_tex=
     img = np.full((res, res, 3), 0.07); img[r, c] = tcol[t]
     out["texel"] = write_png(out_prefix + "_texel.png", (img[::-1] * 255).astype(np.uint8))
     if regions:
-        cols = {"blade": (0.35, 0.55, 0.95), "guard": (0.95, 0.6, 0.2), "gem": (1.0, 0.15, 0.25), "grip": (0.45, 0.8, 0.4),
+        cols = {"body": (0.5, 0.6, 0.75), "blade": (0.35, 0.55, 0.95), "guard": (0.95, 0.6, 0.2), "gem": (1.0, 0.15, 0.25), "grip": (0.45, 0.8, 0.4),
                 "pommel": (0.8, 0.45, 0.9), "edges": (1, 1, 0.2)}
         tc = np.full((T, 3), 0.35)
-        for name in ("blade", "guard", "grip", "pommel", "gem", "edges"):
+        for name in ("body", "blade", "guard", "grip", "pommel", "gem", "edges"):
             if name in regions: tc[np.asarray(regions[name], bool)] = cols[name]
         img = np.full((res, res, 3), 0.07); img[r, c] = tc[t]
         out["regions"] = write_png(out_prefix + "_regions.png", (img[::-1] * 255).astype(np.uint8))

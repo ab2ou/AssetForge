@@ -98,6 +98,31 @@ def _anatomy_geometry(V, an, nb=24):
             "bbox_center": [float((lo[0] + hi[0]) / 2), float((lo[1] + hi[1]) / 2), float((lo[2] + hi[2]) / 2)]}
 
 
+def guess_kind(names):
+    """1.6.0: "weapon" for a long thin model (longest side >= 2.5 x the next one: swords, daggers, spears), else
+    "generic". Only a first guess: s0_intake shows it as REVIEW, and kind= on s0_import / s0_adopt decides."""
+    V = np.concatenate([tri_arrays(n)[0] for n in names]); S = np.sort(V.max(0) - V.min(0))
+    return "weapon" if S[2] >= 2.5 * max(float(S[1]), 1e-9) else "generic"
+
+
+def detect_anatomy_generic(names):
+    """1.6.0: 'anatomy' of any asset = its bounding box. length = the largest dimension (the scale every relative
+    tolerance uses), height = the Z extent, pivot = centre of the base. The guard / grip keys are height bands
+    (thirds) kept only so that code written for swords (collision split, zone masks) runs: they are not parts."""
+    V = np.concatenate([tri_arrays(n)[0] for n in names]); lo, hi = V.min(0), V.max(0); S = hi - lo
+    H = float(S[2]); z0 = float(lo[2]); cx, cy = float((lo[0] + hi[0]) / 2), float((lo[1] + hi[1]) / 2)
+    return {"kind": "generic", "length": float(S.max()), "height": H, "size": [float(x) for x in S],
+            "bbox_center": [cx, cy, float((lo[2] + hi[2]) / 2)], "tip_z": z0, "guard_z0": z0 + H / 3, "guard_z1": z0 + 2 * H / 3,
+            "grip_z0": z0 + 2 * H / 3, "grip_z1": z0 + 0.9 * H, "pommel_z1": float(hi[2]), "guard_half_width": float(S[0] / 2),
+            "axis_xy": [cx, cy], "pivot": [cx, cy, z0], "blade_side_longer": True, "tip_point": [cx, cy, z0],
+            "centerline": None, "wing_boxes": None, "guard_method": "generic: height thirds (compatibility bands, not parts)"}
+
+
+def _detect(P, names):
+    """anatomy by the project's asset kind (settings.kind: "weapon" = default, or "generic")."""
+    return detect_anatomy_generic(names) if P.state["settings"].get("kind") == "generic" else detect_anatomy(names)
+
+
 def refresh_anatomy_geometry(project):
     """add centerline/bbox_center to an existing project's anatomy (no other anatomy value changes)."""
     P = _proj(project); V = np.concatenate([tri_arrays(n)[0] for n in _highs(P)])
@@ -119,7 +144,7 @@ def _link_orphans(names):
     return out
 
 
-def s0_adopt(project, high_names, asset=None, anatomy=None, title=None):
+def s0_adopt(project, high_names, asset=None, anatomy=None, title=None, kind=None):
     """register an existing high-poly (already in the open .blend) as the project's source."""
     P = _proj(project); G = Gate("s0_intake")
     _lk = _link_orphans(high_names)
@@ -127,16 +152,26 @@ def s0_adopt(project, high_names, asset=None, anatomy=None, title=None):
     P.state["settings"]["high"] = list(high_names)
     if asset: P.state["settings"]["asset"] = asset
     if title: P.state["settings"]["title"] = title
-    an = anatomy or detect_anatomy(high_names); P.state["anatomy"] = an
+    st_ = P.state["settings"]                               # 1.6.0: asset kind (weapon / generic)
+    if kind and kind != "auto": st_["kind"] = kind; st_["kind_auto"] = False
+    elif not st_.get("kind"): st_["kind"] = guess_kind(high_names); st_["kind_auto"] = True
+    generic = st_["kind"] == "generic"
+    an = anatomy or _detect(P, high_names); P.state["anatomy"] = an
     _b = P.state["settings"].get("design_baseline")
     if not _b or not os.path.exists(_b) or P.state["settings"].get("design_baseline_names") != list(high_names):
         G.data["design_baseline"] = _write_baseline(P, list(high_names))   # the design as it came in (design_check)
     P.save()
-    G.check("blade_points_down", an["blade_side_longer"], an["blade_side_longer"], msg="blade must be the longer side, tip at min Z")
-    G.check("length_m", round(an["length"], 4), 0.3 < an["length"] < 3.0, msg="real-world size in metres")
-    G.need_review("anatomy", "check guard/grip/pommel heights and the pivot in state.json against the front render")
+    G.check("asset_kind", st_["kind"], not st_.get("kind_auto"), review=True,
+            msg="chosen from the proportions (long and thin = weapon, else generic): confirm it, or import again with kind=...")
+    if generic:
+        G.check("size_m", [round(x, 4) for x in an["size"]], 0.005 < an["length"] < 100.0, msg="width x depth x height in metres")
+        G.need_review("orientation", "front render: is the model upright (Z up) and facing the front camera? Pivot = centre of the base")
+    else:
+        G.check("blade_points_down", an["blade_side_longer"], an["blade_side_longer"], msg="blade must be the longer side, tip at min Z")
+        G.check("length_m", round(an["length"], 4), 0.3 < an["length"] < 3.0, msg="real-world size in metres")
+        G.need_review("anatomy", "check guard/grip/pommel heights and the pivot in state.json against the front render")
     try:
-        views = [v for v in inspection_views(an) if v[0] in ("full_front", "full_back", "guard_center", "tip")]
+        views = [v for v in inspection_views(an) if _vin(v[0], ("full_front", "full_back", "guard_center", "tip"))]
         G.images += [{"path": p, "caption": "high-poly"} for p in render_views(set(high_names), views, P.p("renders", "s0"), "high")]
     except Exception as e:
         G.notes.append(f"render failed: {e!r}")
@@ -149,7 +184,7 @@ def s0_adopt(project, high_names, asset=None, anatomy=None, title=None):
     return P.finish("s0_intake", G)
 
 
-def _import_normalised(src, collection="FORGE_high"):
+def _import_normalised(src, collection="FORGE_high", kind="auto"):
     """import GLB/GLTF/FBX/OBJ, apply transforms, long axis -> Z, blade (the longer side) down, tip at Z=0, centred.
     Returns the new mesh object names."""
     before = set(bpy.data.objects); ext = os.path.splitext(src)[1].lower()
@@ -168,8 +203,14 @@ def _import_normalised(src, collection="FORGE_high"):
         mw = o.matrix_world.copy(); o.parent = None; o.matrix_world = mw; o.select_set(True)
     bpy.context.view_layer.objects.active = new[0]
     bpy.ops.object.transform_apply(location=True, rotation=True, scale=True)
-    V = np.concatenate([tri_arrays(o.name)[0] for o in new]); ext3 = V.max(0) - V.min(0); ax = int(np.argmax(ext3))
     import mathutils
+    if kind == "auto": kind = guess_kind([o.name for o in new])
+    if kind == "generic":                 # 1.6.0: keep the file's orientation (Z up), centre it, base on Z = 0
+        V = np.concatenate([tri_arrays(o.name)[0] for o in new]); c = (V.max(0) + V.min(0)) / 2
+        T = mathutils.Matrix.Translation((-c[0], -c[1], -V[:, 2].min()))
+        for o in new: o.data.transform(T); o.data.update()
+        return [o.name for o in new], {"kind": "generic", "orientation": "kept as imported (Z up), centred, base at Z=0"}
+    V = np.concatenate([tri_arrays(o.name)[0] for o in new]); ext3 = V.max(0) - V.min(0); ax = int(np.argmax(ext3))
     R = mathutils.Matrix.Identity(4)
     if ax == 0: R = mathutils.Matrix.Rotation(math.radians(90), 4, "Y")
     elif ax == 1: R = mathutils.Matrix.Rotation(math.radians(-90), 4, "X")
@@ -191,7 +232,7 @@ def _import_normalised(src, collection="FORGE_high"):
     V = np.concatenate([tri_arrays(o.name)[0] for o in new]); c = (V.max(0) + V.min(0)) / 2
     T = mathutils.Matrix.Translation((-c[0], -c[1], -V[:, 2].min()))
     for o in new: o.data.transform(T); o.data.update()
-    return [o.name for o in new], {"long_axis_was": "xyz"[ax], "flipped": not an["blade_side_longer"],
+    return [o.name for o in new], {"kind": "weapon", "long_axis_was": "xyz"[ax], "flipped": not an["blade_side_longer"],
                                    "face_turned_90": face_turned, "width_y_over_x": round(float(np.median(wy_) / max(np.median(wx_), 1e-9)), 3)}
 
 
@@ -225,6 +266,25 @@ def _blender_voxel(co, tv, voxel):
         if bpy.data.meshes.get(mname): bpy.data.meshes.remove(bpy.data.meshes[mname])
 
 
+def _close_holes(co, tv):
+    """1.6.0: cap the open boundaries of a mesh (PyMeshLab) so a voxel rebuild knows inside from outside."""
+    import pymeshlab
+    ms = pymeshlab.MeshSet(); ms.add_mesh(pymeshlab.Mesh(vertex_matrix=np.asarray(co, np.float64), face_matrix=np.asarray(tv, np.int32)))
+    for _ in range(3):
+        try: ms.meshing_repair_non_manifold_edges(); ms.meshing_repair_non_manifold_vertices()
+        except Exception: pass
+        try: ms.meshing_close_holes(maxholesize=1000000, newfaceselected=False)
+        except Exception: pass
+    m = ms.current_mesh(); return m.vertex_matrix().astype(np.float64), m.face_matrix().astype(np.int64)
+
+
+def _lost_surface(co, tv, c2, t2, tol, n=20000):
+    """share of the original surface (area-weighted samples) farther than tol from the rebuilt surface."""
+    from mathutils.bvhtree import BVHTree
+    d = nearest_dist(BVHTree.FromPolygons(np.asarray(c2).tolist(), np.asarray(t2).tolist()), sample_surface(np.asarray(co, float), np.asarray(tv), n)[0])
+    return float((np.asarray(d) > tol).mean())
+
+
 def voxel_cleanup(project, voxel_rel=None, taubin_steps=None, min_part_pct=None):
     """1.5.0 default high-poly clean-up (user decision 2026-11-03): rebuild the AI surface through a signed-distance
     voxel grid (1.5.2: Blender's own OpenVDB voxel remesh by default; MeshLib only if config engine="meshlib", it needs
@@ -244,17 +304,28 @@ def voxel_cleanup(project, voxel_rel=None, taubin_steps=None, min_part_pct=None)
         cp.name = f"{asset}_texture_source" + (f"_{i}" if i else ""); cp.data.name = cp.name
         for col in ob.users_collection: col.objects.link(cp)
         cp.hide_set(True); cp.hide_render = True; src.append(cp.name)
-    co, tv = _joined_world(names); eng = c.get("engine", "blender")
+    co, tv = _joined_world(names); eng = c.get("engine", "blender"); vox = float(vr * L)
+    if P.state["settings"].get("kind") == "generic" and not voxel_rel:
+        # 1.6.0: a sword is thin, so voxel = 0.00071 x length gives ~1 M triangles. A bulky asset of the same length
+        # has far more surface: size the voxel from the area (triangles ~ 2.7 x area / voxel^2), never finer than above
+        a_ = np.asarray(co)[np.asarray(tv)]; area = float(np.linalg.norm(np.cross(a_[:, 1] - a_[:, 0], a_[:, 2] - a_[:, 0]), axis=1).sum() / 2)
+        vox = max(vox, math.sqrt(2.7 * area / float(c.get("max_tris", 1.2e6))))     # measured: tris ~ 2.7 x area / voxel^2
     if eng == "meshlib":                     # optional; free for non-commercial use only
         from meshlib import mrmeshpy as mm, mrmeshnumpy as mn
         m = mn.meshFromFacesVerts(np.ascontiguousarray(tv, np.int32), np.ascontiguousarray(co, np.float32))
-        prm = mm.OffsetParameters(); prm.voxelSize = float(vr * L)
+        prm = mm.OffsetParameters(); prm.voxelSize = vox
         try: prm.signDetectionMode = mm.SignDetectionMode.HoleWindingRule
         except Exception: pass
         m2 = mm.offsetMesh(mm.MeshPart(m), 0.0, prm)
         c2 = mn.getNumpyVerts(m2).astype(np.float64); t2 = mn.getNumpyFaces(m2.topology).astype(np.int64)
     else:
-        c2, t2 = _blender_voxel(co, tv, vr * L)
+        c2, t2 = _blender_voxel(co, tv, vox)
+    # 1.6.0: an open mesh (holes, separate shells) can lose whole parts in a voxel rebuild: measure it, and retry once
+    # with the holes capped. s1 gates on the remaining loss.
+    lost = _lost_surface(co, tv, c2, t2, 4 * vox); closed = False
+    if lost > 0.005 and eng != "meshlib":
+        cc, tc = _close_holes(co, tv); c2b, t2b = _blender_voxel(cc, tc, vox); lost_b = _lost_surface(co, tv, c2b, t2b, 4 * vox)
+        if lost_b < lost: c2, t2, lost, closed = c2b, t2b, lost_b, True
     ms = pymeshlab.MeshSet(); ms.add_mesh(pymeshlab.Mesh(vertex_matrix=c2, face_matrix=t2.astype(np.int32)))
     n0 = ms.current_mesh().face_number()
     ms.meshing_remove_connected_component_by_diameter(mincomponentdiag=pymeshlab.PercentageValue(mp))
@@ -267,8 +338,9 @@ def voxel_cleanup(project, voxel_rel=None, taubin_steps=None, min_part_pct=None)
         o_ = bpy.data.objects[n]; o_.hide_set(True); o_.hide_render = True
     s_ = P.state["settings"]; s_["high"] = [keep]; s_["texture_source"] = src; s_.pop("look_ref", None)
     info = {"method": ("MeshLib" if eng == "meshlib" else "Blender OpenVDB") + " voxel + small parts removed + Taubin",
-            "engine": eng, "voxel_mm": round(vr * L * 1000, 3), "taubin_steps": ts_,
-            "small_parts_faces_removed": int(n0 - len(t3)), "tris": int(len(t3)), "replaced": names, "texture_source": src,
+            "engine": eng, "voxel_mm": round(vox * 1000, 3), "taubin_steps": ts_,
+            "small_parts_faces_removed": int(n0 - len(t3)),
+            "lost_surface_pct": round(100 * _lost_surface(co, tv, c3, t3, 4 * vox), 2), "holes_capped_first": closed, "tris": int(len(t3)), "replaced": names, "texture_source": src,
             "time": time.strftime("%Y-%m-%d %H:%M")}
     s_["high_cleanup"] = info; P.save()
     info["design_baseline"] = _write_baseline(P, [keep]); P.save()
@@ -326,13 +398,14 @@ def _qem_copy(P, target, name):
     return ob
 
 
-def s0_import(project, path, title=None, forward="-Y", up="Z", weld=True):
+def s0_import(project, path, title=None, forward="-Y", up="Z", weld=True, kind="auto"):
     """import an AI-generated model (GLB/GLTF/FBX/OBJ), keep the original file, normalise to +Z with the tip low,
     apply transforms; then same checks as s0_adopt."""
     P = _proj(project); src = P.p("source", os.path.basename(path))
     if os.path.abspath(path) != os.path.abspath(src): shutil.copy2(path, src)
-    names, orient = _import_normalised(src)
-    P.state["settings"]["import_orientation"] = orient; P.save()
+    names, orient = _import_normalised(src, kind=kind)      # kind: "auto" | "weapon" | "generic" (any other model)
+    P.state["settings"]["import_orientation"] = orient
+    P.state["settings"]["kind"] = orient.get("kind", "weapon"); P.state["settings"]["kind_auto"] = kind == "auto"; P.save()
     if weld:          # 1.4.2: importers split vertices on UV seams -> open mesh -> wrong volume/mass in s0_spec
         P.state["settings"]["high"] = list(names); P.save(); weld_highpoly(project, names=names)
     return s0_adopt(project, names, title=title)
@@ -474,7 +547,8 @@ def uniform_fit(project, target_overall_m=None, factor=None, names=None):
     """change the SIZE only: one factor on all three axes about the tip, so the shape and every detail are kept
     (the way to match a real sword's length). Positions are saved first (restore_positions); design_check must PASS."""
     P = _proj(project); names = names or _highs(P); co, _ = _joined_world(names)
-    lo, hi = co.min(0), co.max(0); Lnow = float(hi[2] - lo[2])
+    lo, hi = co.min(0), co.max(0)
+    Lnow = float((hi - lo).max()) if P.state["settings"].get("kind") == "generic" else float(hi[2] - lo[2])
     f = float(factor) if factor else (float(target_overall_m) / Lnow if target_overall_m else 0.0)
     if f <= 0: raise ValueError("give target_overall_m (metres) or factor")
     saved = _save_positions(P, names, "uniform_fit"); piv = np.array([(lo[0] + hi[0]) / 2, (lo[1] + hi[1]) / 2, lo[2]])
@@ -483,7 +557,7 @@ def uniform_fit(project, target_overall_m=None, factor=None, names=None):
         L = np.empty(len(me.vertices) * 3); me.vertices.foreach_get("co", L); L = L.reshape(-1, 3)
         W = L @ Mw[:3, :3].T + Mw[:3, 3]; W = piv + (W - piv) * f
         L = (W - Mw[:3, 3]) @ Mi[:3, :3].T; me.vertices.foreach_set("co", L.ravel()); me.update()
-    P.state["anatomy"] = detect_anatomy(names); P.save()
+    P.state["anatomy"] = _detect(P, names); P.save()
     dc = design_check(project, names)
     rep = {"edit": "uniform_fit", "factor": round(f, 6), "length_before_m": round(Lnow, 4), "length_after_m": round(Lnow * f, 4),
            "design_check": dc, "saved_positions": saved}
@@ -522,7 +596,7 @@ def weld_highpoly(project, tol_rel=1e-6, names=None, clear_custom_normals=True):
     tolerance is tiny (1e-6 of the weapon length, ~1 micrometre on a 1.2 m sword): only coincident vertices merge,
     never real details. UVs stay per corner, so the texture layout is kept. Positions are saved first."""
     import bmesh
-    P = _proj(project); names = names or _highs(P); an = P.state.get("anatomy") or detect_anatomy(names)
+    P = _proj(project); names = names or _highs(P); an = P.state.get("anatomy") or _detect(P, names)
     tol = max(an["length"] * tol_rel, 1e-9); saved = _save_positions(P, names, "weld"); out = {}
     for n in names:
         ob = bpy.data.objects[n]; me = ob.data
@@ -690,7 +764,7 @@ def remove_junk(project, dry_run=False):
 def render_check(project, tag, views=("full_front", "side", "guard_center", "grip", "pommel"), engine="WORKBENCH"):
     """the same cameras before and after an edit: renders the high poly into reports/s0_edits/<tag>/.
     'side' looks along the thin axis's normal (shows thickness)."""
-    P = _proj(project); an = detect_anatomy(_highs(P)); out = P.gate_dir("s0_edits", tag); L = an["length"]
+    P = _proj(project); an = _detect(P, _highs(P)); out = P.gate_dir("s0_edits", tag); L = an["length"]
     cx, cy = an["axis_xy"]; V = {v[0]: v for v in inspection_views(an)}
     V["side"] = ("side", (cx, cy, L / 2), (1, 0, 0), 1.5 * L, 90)
     paths = render_views(set(_highs(P)), [V[v] for v in views if v in V], out, "high", engine=engine)
@@ -821,9 +895,9 @@ def candidate_measure(project, path, tag, weapon_type=None, style=None, characte
     m, _ = measure_weapon(co, tv, an, prof["densities"])
     guess = guess_type(m)
     C = spec_checks(m, wt or guess[0], st, prof, ch) if (wt or guess[0]) != "unknown" else []
-    views = [v for v in inspection_views(an) if v[0] in ("full_front", "full_back", "tip", "blade_mid", "junction", "guard_center", "guard_left", "grip", "pommel")]
+    views = [v for v in inspection_views(an) if _vin(v[0], ("full_front", "full_back", "tip", "blade_mid", "junction", "guard_center", "guard_left", "grip", "pommel"))]
     geo = render_views(set(names), views, out, "geo", engine="WORKBENCH")
-    lit = render_views(set(names), [v for v in views if v[0] in ("full_front", "guard_center", "pommel")], out, "lit")
+    lit = render_views(set(names), [v for v in views if _vin(v[0], ("full_front", "guard_center", "pommel"))], out, "lit")
     rep = {"tag": tag, "source": path, "import": how, "objects": names, "anatomy": an, "health": health,
            "measure": m, "weapon_type": wt or guess[0], "type_guess": guess, "style": st,
            "checks": [list(c) for c in C], "fails": sum(1 for c in C if c[2] == "FAIL"), "reviews": sum(1 for c in C if c[2] == "REVIEW"),
@@ -904,6 +978,12 @@ def s1_highpoly(project, noise_review=True):
     if hc.get("method") == "voxel" and "s1_highpoly" not in P.state["stages"] and not P.state["settings"].get("high_cleanup") \
             and not P.state["settings"].get("no_high_cleanup"):
         G.data["voxel_cleanup"] = voxel_cleanup(project); P = _proj(project)
+    vc_ = P.state["settings"].get("high_cleanup") or {}
+    if isinstance(vc_, dict) and vc_.get("lost_surface_pct") is not None:      # 1.6.0: did the voxel rebuild drop parts?
+        lp_ = vc_["lost_surface_pct"]
+        G.check("cleanup_kept_shape", lp_, lp_ <= 0.5, review=lp_ <= 5.0,
+                msg="% of the original surface more than 4 voxels from the rebuilt one (hidden inner faces count): "
+                    "above 5 % a part is missing - open mesh? close it, or set settings no_high_cleanup")
     tot_tris = 0; nm = 0; bd = 0; loose = 0
     for n in _highs(P):
         co, tv, _, _, _ = tri_arrays(n); et = edge_faces(tv)
@@ -920,7 +1000,7 @@ def s1_highpoly(project, noise_review=True):
             msg="the shape must equal the intake design (only one uniform size factor allowed); else restore_positions")
     if noise_review:
         G.need_review("surface", "close-ups: no noise, no dotted/beaded ridges, symmetric, no melted details (AI artefacts)")
-    views = [v for v in inspection_views(P.state["anatomy"]) if v[0] not in ("full_back",)]
+    views = [v for v in inspection_views(P.state["anatomy"]) if not _vin(v[0], ("full_back",))]
     G.images += [{"path": p, "caption": "high (workbench)"} for p in render_views(set(_highs(P)), views, P.p("renders", "s1"), "high", engine="WORKBENCH")]
     return P.finish("s1_highpoly", G)
 
@@ -1148,7 +1228,7 @@ def look_compare(anatomy, high_names, low_name, out_dir, tag, normal_img, uv_nam
     """render high (grey) and low (grey + normal map) from the inspection cameras with the same light; per view:
     silhouette IoU and the luminance difference inside the shared mask (mean, p95)."""
     os.makedirs(out_dir, exist_ok=True); low = bpy.data.objects[low_name]
-    V = [v for v in inspection_views(anatomy) if v[0] in views]
+    V = [v for v in inspection_views(anatomy) if _vin(v[0], views)]
     sc = _inspect_scene(); prev = (sc.render.film_transparent, sc.view_settings.exposure, sc.render.image_settings.color_depth)
     sc.render.film_transparent = True; sc.view_settings.exposure = -1.3; sc.render.image_settings.color_depth = "16"   # 8-bit steps hid the differences
     grey = _look_grey_mat("FORGE_look_grey"); lowm = _look_grey_mat("FORGE_look_low_" + low_name, bpy.data.images[normal_img], uv_name)
@@ -1309,19 +1389,19 @@ def s2_lowpoly(project, target=None, max_iter=4, step=1.3, existing=None, method
     # ---- comparison: same camera/light, high vs low (flat), silhouettes, wireframe
     ob = bpy.data.objects[name]
     for p in ob.data.polygons: p.use_smooth = False
-    views = [v for v in inspection_views(P.state["anatomy"]) if v[0] not in ("full_back",)]
+    views = [v for v in inspection_views(P.state["anatomy"]) if not _vin(v[0], ("full_back",))]
     cd = P.gate_dir("s2_lowpoly", "comparison"); dd = P.gate_dir("s2_lowpoly", "diagnostics")
     hi = render_views(set(_highs(P)), views, cd, "high", engine="WORKBENCH")
     lo = render_views({name}, views, cd, "low_flat", engine="WORKBENCH")
     G.image(compare_sheet(hi, lo, os.path.join(cd, "sheet_high_vs_lowflat.png")), "left high, right low (flat): shape and big forms", "comparison")
-    sv = [v for v in inspection_views(P.state["anatomy"]) if v[0] in ("full_front", "full_back", "guard_center")]
+    sv = [v for v in inspection_views(P.state["anatomy"]) if _vin(v[0], ("full_front", "full_back", "guard_center"))]
     hs = render_views(set(_highs(P)), sv, cd, "sil_high", engine="WORKBENCH", mode="silhouette")
     ls = render_views({name}, sv, cd, "sil_low", engine="WORKBENCH", mode="silhouette")
     G.image(compare_sheet(hs, ls, os.path.join(cd, "sheet_silhouette.png")), "silhouettes: edges, tips, notches must match", "comparison")
-    wv = [v for v in inspection_views(P.state["anatomy"]) if v[0] in ("full_front", "guard_center", "junction")]
+    wv = [v for v in inspection_views(P.state["anatomy"]) if _vin(v[0], ("full_front", "guard_center", "junction"))]
     for p_ in render_views({name}, wv, cd, "wire_low", mode="wire"): G.image(p_, "low wireframe", "comparison")
     # ---- diagnostics: defects painted on the model
-    dv = [v for v in inspection_views(P.state["anatomy"]) if v[0] in ("full_front", "full_back", "guard_center", "guard_left", "junction", "pommel")]
+    dv = [v for v in inspection_views(P.state["anatomy"]) if _vin(v[0], ("full_front", "full_back", "guard_center", "guard_left", "junction", "pommel"))]
     F = et["F"]; bad = np.zeros(len(tv), int)
     bad[F[(ang > 150) & conc].ravel()] = 2; bad[(mina < th["min_angle_deg"]) & (bad == 0)] = 1
     rgb = np.tile([0.6, 0.6, 0.62], (len(tv), 1)); rgb[bad == 2] = (1, 0, 0); rgb[bad == 1] = (1, 0.9, 0)
@@ -1364,12 +1444,55 @@ def _spec_proxies(an, height, hands, hand_breadth):
     return made, hands_objs
 
 
-def s0_spec(project, weapon_type=None, style=None, character_height=None, hands=None):
+def _s0_spec_generic(P, size_m=None, character_height=None):
+    """1.6.0 spec gate of a generic asset: real size and a render beside a character. Weapon measurements (blade,
+    grip, mass, balance, hands) do not apply and are skipped."""
+    G = Gate("s0_spec"); st = P.state["settings"]; prof = load_profiles(); an = P.state["anatomy"]
+    if size_m: st["size_m"] = float(size_m)
+    H = float(character_height or st.get("character_height_m") or prof["character"]["height_m"]); st["character_height_m"] = H; P.save()
+    co, tv = _joined_world(list(_highs(P))); co = np.asarray(co, float); tv = np.asarray(tv)
+    lo, hi = co.min(0), co.max(0); S = hi - lo; big = float(S.max()); et = edge_faces(tv)
+    n_open = int(et["n_boundary"] + et["n_nonmanifold"])
+    a, b, c_ = co[tv[:, 0]], co[tv[:, 1]], co[tv[:, 2]]; vol = abs(float(np.einsum("ij,ij->i", a, np.cross(b, c_)).sum() / 6))
+    G.check("asset_kind", "generic", True, msg="not a long weapon: blade / grip / mass / balance checks are skipped")
+    G.check("size_m", [round(float(x), 4) for x in S], 0.005 < big < 100.0, msg="width x depth x height in metres")
+    want = st.get("size_m")
+    if want:
+        r = big / want
+        G.check("size_declared", round(r, 3), 0.9 <= r <= 1.1,
+                msg=f"largest side {big:.3f} m / declared {want} m must be 0.9-1.1 (else uniform_fit('{P.name}', target_overall_m={want}))")
+    else:
+        G.check("size_declared", None, False, review=True,
+                msg=f"largest side is {big:.3f} m: is that the real size? Declare it with s0_spec('{P.name}', size_m=...) to make this a measured check")
+    G.check("volume_reliable", n_open, n_open == 0, review=True, msg="open / non-manifold edges (the voxel clean-up of s1 closes them)")
+    G.data.update(kind="generic", measurements={"extent_m": [round(float(x), 4) for x in S], "largest_m": round(big, 4),
+                                                 "open_edges": n_open, "volume_m3": vol, "character_height_m": H})
+    cd = P.gate_dir("s0_spec", "comparison")
+    an2 = dict(an); an2["axis_xy"] = [float(lo[0]) + 0.025 * H + 0.15, an["axis_xy"][1]]     # character left of the asset
+    made, _h = _spec_proxies(an2, H, 0, prof["character"]["hand_breadth_m"])
+    try:
+        x0 = float(lo[0]) - 0.45 * H - 0.1; W = float(hi[0]) - x0; hh = max(H, float(hi[2])); zb = min(0.0, float(lo[2]))
+        v1 = [("with_character", ((x0 + float(hi[0])) / 2, an["axis_xy"][1], (zb + hh) / 2), (0, -1, 0),
+               1.2 * max(W / 2 / 0.36, (hh - zb) / 2 / 0.2025) + float(S[1]) / 2 + 0.3, 0)]
+        for p_ in render_views(set(_highs(P)) | set(made), v1, cd, "scale", engine="WORKBENCH"):
+            G.image(p_, f"asset beside a {H} m character (grey proxy)", "comparison")
+    finally:
+        for n in made:
+            o = bpy.data.objects.get(n)
+            if o: me = o.data; bpy.data.objects.remove(o); bpy.data.meshes.remove(me)
+    G.notes.append("size: change it ONLY with uniform_fit(project, target_overall_m=<largest side in metres>)")
+    G.need_review("size_and_orientation", "look at the image beside the character: right size, upright, front towards the camera?")
+    return P.finish("s0_spec", G)
+
+
+def s0_spec(project, weapon_type=None, style=None, character_height=None, hands=None, size_m=None):
     """Is the AI model a usable weapon of its type? Measures length, blade/grip, width, thickness, volume, estimated
     mass and point of balance, compares them with weapon_profiles.json (sourced ranges; fantasy widens them) and
     with a character (grip fits the hands, length vs the character). Renders the weapon beside a character of the
     chosen height and hand blocks on the grip. Side gate: it does not make later stages stale; s1 requires it."""
     P = _proj(project); P.require("s0_intake"); G = Gate("s0_spec")
+    if P.state["settings"].get("kind") == "generic" or weapon_type == "generic":         # 1.6.0: any other model
+        return _s0_spec_generic(P, size_m=size_m, character_height=character_height)
     w = dict(P.cfg.get("weapon", {})); w.update(P.state["settings"].get("weapon", {}))
     if weapon_type: w["type"] = weapon_type; w.pop("type_auto_from", None)
     if style: w["style"] = style
@@ -1473,7 +1596,9 @@ def _ensure_tris(name):
 
 
 def uv_classes(co, tv, anatomy=None):
-    """chart classes: blade-flat front / back / sides, and the grip+pommel zone (charts never cross a class)."""
+    """chart classes: blade-flat front / back / sides, and the grip+pommel zone (charts never cross a class).
+    Generic assets (1.6.0): classes by the dominant facing axis only."""
+    if anatomy and anatomy.get("kind") == "generic": anatomy = None
     cr = np.cross(co[tv[:, 1]] - co[tv[:, 0]], co[tv[:, 2]] - co[tv[:, 0]]); A3 = np.linalg.norm(cr, axis=1) / 2
     N = cr / np.maximum(np.linalg.norm(cr, axis=1, keepdims=True), 1e-20); z = co[tv].mean(1)[:, 2]
     blade = z < anatomy["guard_z0"] if anatomy else np.ones(len(tv), bool)
@@ -1487,8 +1612,11 @@ def uv_regions(co, tv, anatomy, zones=(), sharp_deg=45.0):
     """critical regions for the UV gate: blade, guard, gem (settings.protect_zones), grip, pommel, edges (tris next to
     feature edges sharper than sharp_deg)."""
     c = co[tv].mean(1); z = c[:, 2]; an = anatomy
-    R = {"blade": z < an["guard_z0"], "guard": (z >= an["guard_z0"]) & (z < an["guard_z1"]),
-         "grip": (z >= an["grip_z0"]) & (z < an["grip_z1"]), "pommel": z >= an["grip_z1"]}
+    if an.get("kind") == "generic":       # 1.6.0: no named parts: one region (+ gem zones and feature edges below)
+        R = {"body": np.ones(len(tv), bool)}
+    else:
+        R = {"blade": z < an["guard_z0"], "guard": (z >= an["guard_z0"]) & (z < an["guard_z1"]),
+             "grip": (z >= an["grip_z0"]) & (z < an["grip_z1"]), "pommel": z >= an["grip_z1"]}
     if zones:
         g = np.zeros(len(tv), bool)
         for x, y, zz, r in zones: g |= np.linalg.norm(c - np.array([x, y, zz]), axis=1) < r
@@ -1513,7 +1641,7 @@ def forge_unwrap(name, tex=4096, pad_px=16, hard_deg=45.0, uv_name="UV_game", an
     protect = None
     if anatomy:                                                     # blade, sharp edges and gem are never shrunk to fit
         R = uv_regions(co, tv, anatomy, protect_zones or [])
-        protect = R["blade"] | R["edges"] | R.get("gem", np.zeros(len(tv), bool))
+        protect = R.get("blade", np.zeros(len(tv), bool)) | R["edges"] | R.get("gem", np.zeros(len(tv), bool))
     kw_ = {"coverage_try": tuple(coverage_try)} if coverage_try else {}
     out, rp = uv_pack(UV, tv, G=G, margin=margin, protect=protect, log=log, **kw_)
     tri_scale = rp.pop("_tri_scale")
@@ -1530,7 +1658,7 @@ def forge_unwrap(name, tex=4096, pad_px=16, hard_deg=45.0, uv_name="UV_game", an
         wn = ob.modifiers.new("WeightedNormal", "WEIGHTED_NORMAL"); wn.keep_sharp = True; wn.weight = 50
     shr = {}
     if anatomy:
-        for k in ("blade", "edges", "gem", "guard", "grip", "pommel"):
+        for k in ("body", "blade", "edges", "gem", "guard", "grip", "pommel"):
             if k in R and R[k].any():
                 m_ = R[k] & (tri_scale < 0.999)
                 shr[k] = {"tris_shrunk": int(m_.sum()), "min_factor": round(float(tri_scale[R[k]].min()), 3)}
@@ -1656,11 +1784,11 @@ def s3_uv(project, method="forge", angle_limit=66.0, hard_deg=45.0, tex=None, pa
     for o in cmp:
         co2, tv2, _, uv2, _ = tri_arrays(o, uv_name)
         G.image(uv_diag_pngs(co2, tv2, uv2, os.path.join(cd, f"uv_{o}"), 2048, None, pad_px, tex)["islands"], f"previous layout: {o}", "comparison")
-    views = [v for v in inspection_views(P.state["anatomy"]) if v[0] in ("full_front", "full_back", "junction", "blade_mid", "guard_center", "guard_left", "grip", "pommel")]
+    views = [v for v in inspection_views(P.state["anatomy"]) if _vin(v[0], ("full_front", "full_back", "junction", "blade_mid", "guard_center", "guard_left", "grip", "pommel"))]
     for p_ in render_views({name}, views, dd, "checker", override_mat=_checker_mat(uv_name=uv_name)):
         G.image(p_, "UV checker (64 px squares at 4K): squares should stay square and equal in size; seams show as breaks", "diagnostics")
     paint_tris(name, hard_edge_tris(name, uv_name))
-    for p_ in render_views({name}, [v for v in views if v[0] in ("full_front", "guard_center", "guard_left", "junction")], dd, "edges", engine="WORKBENCH", mode="attribute"):
+    for p_ in render_views({name}, [v for v in views if _vin(v[0], ("full_front", "guard_center", "guard_left", "junction"))], dd, "edges", engine="WORKBENCH", mode="attribute"):
         G.image(p_, "red = hard edge inside an island (line after bake), orange = seam on a smooth surface", "diagnostics")
     G.need_review("seam_placement", f"seams on smooth visible surfaces: {rep['seam_length_on_smooth_m']} m; check the checker renders of gem, blade flats and guard")
     P.checkpoint("s3_uv")
@@ -1753,7 +1881,7 @@ def s4_bake_check(project):
     for f in os.listdir(lb["dir"]):
         if f.endswith(".png") and f.startswith(pre):
             G.check("map_" + f[len(pre) + 1:-4], os.path.getsize(os.path.join(lb["dir"], f)), os.path.getsize(os.path.join(lb["dir"], f)) > 1000)
-    views = [v for v in inspection_views(P.state["anatomy"]) if v[0] not in ("full_back",)]
+    views = [v for v in inspection_views(P.state["anatomy"]) if not _vin(v[0], ("full_back",))]
     cd = P.gate_dir("s4_bake", "comparison")
     tsrc = [n for n in (P.state["settings"].get("texture_source") or []) if n in bpy.data.objects]   # textured original
     hi = render_views(set(tsrc or _highs(P)), views, cd, f"high_{lb['size']}")
@@ -1807,7 +1935,10 @@ def s7_export(project, tex_dir=None, formats=("FBX", "GLB", "OBJ")):
         except Exception: pass
     piv = an["pivot"]
     rep = export_with_pivot(base, root, tex_dir, pre, pivot=tuple(piv))
-    v = validate(root, base, expect_height_m=an["length"], pivot_frac=(piv[2] - an["tip_z"]) / an["length"])
+    pf = (piv[2] - an["tip_z"]) / an["length"]
+    if an.get("kind") == "generic":           # validate() measures along the longest side: where the base-centre pivot sits on it
+        ax_ = int(np.argmax(an["size"])); pf = (piv[ax_] - (an["bbox_center"][ax_] - an["size"][ax_] / 2)) / an["size"][ax_]
+    v = validate(root, base, expect_height_m=an["length"], pivot_frac=pf)
     G.data.update(export=rep, validate=v)
     G.check("reimport_validate", v.get("passed"), bool(v.get("passed")), msg="; ".join(v.get("problems", [])[:5]))
     for d in formats:
@@ -1865,7 +1996,7 @@ def s5_look(project, script=None):
         G.check(f"map_{k}", sz, ok and sz == [size, size], msg=f"{size} px")
     game_material([_asset(P) + "_LOD0"], fd, pre, "M_" + _asset(P)[3:])     # the work file shows the final look
     try:                     # 1.4.2: the REVIEW had no image; render the final material (lit) next to the high
-        views = [v for v in inspection_views(P.state["anatomy"]) if v[0] in ("full_front", "guard_center", "grip", "pommel", "tip")]
+        views = [v for v in inspection_views(P.state["anatomy"]) if _vin(v[0], ("full_front", "guard_center", "grip", "pommel", "tip"))]
         cd = P.gate_dir("s5_look", "comparison")
         hi = render_views(set(_highs(P)), views, cd, "high"); lo = render_views({_asset(P) + "_LOD0"}, views, cd, "final")
         G.image(compare_sheet(hi, lo, os.path.join(cd, "sheet_high_vs_final.png")), "left high (generator material), right final LOD0 material", "comparison")
@@ -1966,7 +2097,7 @@ def look_preview(project, tex_dir, tag="look", views=("full_front", "junction", 
     m = bpy.data.materials[mname]
     for n_ in m.node_tree.nodes:
         if n_.type == "BSDF_PRINCIPLED": n_.inputs["Emission Strength"].default_value = emission
-    out = P.gate_dir("s5_look", f"preview_{tag}"); V = [v for v in inspection_views(P.state["anatomy"]) if v[0] in views]
+    out = P.gate_dir("s5_look", f"preview_{tag}"); V = [v for v in inspection_views(P.state["anatomy"]) if _vin(v[0], views)]
     try:
         files = render_views({name}, V, out, "look")
     finally:
@@ -2027,6 +2158,12 @@ def s8_media(project, shots=None):
     V = {v[0]: v for v in inspection_views(an)}
     bc = an.get("bbox_center") or [0, 0, an["length"] / 2]
     c0 = (bc[0], bc[1], an["length"] / 2)            # 1.4.2: frame the bounding box (curved blades sat off-centre)
+    if an.get("kind") == "generic" and not shots:              # 1.6.0: gallery from the generic cameras
+        def g_(n, k=1.0): return dict(target=tuple(V[n][1]), direction=V[n][2], dist=k * V[n][3], lens=50, roll=0)
+        back = dict(g_("front"), target=(-V["front"][1][0], -V["front"][1][1], V["front"][1][2]))
+        shots = [("01_hero", g_("three_quarter", 0.72), 0), ("02_front", g_("front"), 0), ("03_back", back, 180),
+                 ("04_side", g_("right"), 0), ("05_detail", g_("detail_center"), 0), ("06_detail_high", g_("detail_high"), 0),
+                 ("07_wire", g_("three_quarter", 0.72), 0, "wire"), ("08_wire_detail", g_("detail_center"), 0, "wire")]
     shots = shots or [("01_hero", dict(target=c0, direction=(0.55, -0.8, 0.18), dist=1.2 * an["length"], lens=35, roll=-58), 0),
                       ("02_front", dict(target=c0, direction=(0, -1, 0), dist=1.6 * an["length"], lens=50, roll=90), 0),
                       ("03_back", dict(target=(-c0[0], -c0[1], c0[2]), direction=(0, -1, 0), dist=1.6 * an["length"], lens=50, roll=-90), 180),
@@ -2171,7 +2308,7 @@ def s9_package(project, title=None, price=19.99):
     G.check("textures_2k", len(n2), n2 == n4, msg="every 4K map has a 2K copy")
     emi = _map_has_signal(os.path.join(root, "Textures", "4K", f"{P.state['settings'].get('tex_prefix', 'T_' + base[3:])}_Emissive.png"))
     G.data["emissive_used"] = emi
-    rep = package(root, pk, base=title.replace(" ", ""), title=title, tris=tris, height_m=P.state["anatomy"]["length"], emissive=emi)
+    rep = package(root, pk, base=title.replace(" ", ""), title=title, tris=tris, height_m=P.state["anatomy"].get("height", P.state["anatomy"]["length"]), emissive=emi)
     G.data.update(package=rep, blend=blend, textures_2k_made=made2k)
     zips = [f for f in os.listdir(pk) if f.endswith(".zip")]
     G.check("zips", len(zips), len(zips) >= 2)
@@ -2265,7 +2402,7 @@ def s2_variant(project, method="A", budget=18000, tag=None, high_bvh=None, high_
     ang, conc, et = dihedral(co, tv); folds = int(((ang > 150) & conc).sum())
     mina = min_angles(co, tv); slivers = int((mina < th["min_angle_deg"]).sum())
     dev, per_tri = deviation(name, _highs(P), n=30000)
-    views = [v for v in inspection_views(P.state["anatomy"]) if v[0] != "guard_back"]
+    views = [v for v in inspection_views(P.state["anatomy"]) if not _vin(v[0], ("guard_back",))]
     geo = compare_geometry(hb, bvh_object(name), views)
     rep = {"tag": tag, "method": method, "budget": budget, "tris": int(len(tv)), "flips": flips, "folds": folds,
            "fold_rel": round(folds / max(et["n_edges"], 1), 5), "slivers": slivers,
@@ -2280,7 +2417,7 @@ def s2_variant(project, method="A", budget=18000, tag=None, high_bvh=None, high_
     if rep["geometry_summary"].get("silhouette_iou_min", 1) < 0.95: crit.append("silhouette")
     rep["critical_fail"] = crit
     for p in ob.data.polygons: p.use_smooth = False
-    kv = [v for v in views if v[0] in ("full_front", "guard_center", "guard_left", "junction", "tip", "pommel")]
+    kv = [v for v in views if _vin(v[0], ("full_front", "guard_center", "guard_left", "junction", "tip", "pommel"))]
     rep["images"] = render_views({name}, kv, out, "flat", engine="WORKBENCH")
     paint_tris(name, heat(per_tri, th["dev_p99_rel"] * L))
     rep["images"] += render_views({name}, kv[:3], out, "deviation", engine="WORKBENCH", mode="attribute")
@@ -2308,7 +2445,7 @@ def s2_variants(project, plan=None):
     within a small margin of the best, prefer the fewest triangles."""
     P = _proj(project); P.require("s1_highpoly"); plan = _s2_plan(P, plan)
     hb = bvh_of(_highs(P))[0]
-    kv = [v for v in inspection_views(P.state["anatomy"]) if v[0] in ("full_front", "guard_center", "guard_left", "junction", "tip", "pommel")]
+    kv = [v for v in inspection_views(P.state["anatomy"]) if _vin(v[0], ("full_front", "guard_center", "guard_left", "junction", "tip", "pommel"))]
     hv = render_views(set(_highs(P)), kv, P.gate_dir("s2_variants", "_high"), "high", engine="WORKBENCH")
     rows = []
     for method, budget in plan:
@@ -2391,6 +2528,23 @@ def selftest_make(project="forge_selftest", subdiv=3):
     return {"parts": parts, "tris": sum(sum(len(pp.vertices) - 2 for pp in bpy.data.objects[n].data.polygons) for n in parts)}
 
 
+def selftest_make_generic(project="forge_selftest_generic", subdiv=4):
+    """1.6.0: a procedural non-weapon 'high poly' (Blender's monkey head on a base, 0.6 m, two colours, open edges at
+    the eyes like many AI meshes) so the generic path can be tested in minutes without a real asset."""
+    for o in list(bpy.data.objects): bpy.data.objects.remove(o)
+    bpy.ops.mesh.primitive_monkey_add(size=0.5, location=(0, 0, 0.36)); m = bpy.context.active_object; m.name = "st_head"
+    md = m.modifiers.new("sub", "SUBSURF"); md.levels = subdiv; bpy.ops.object.modifier_apply(modifier=md.name)
+    bpy.ops.mesh.primitive_cylinder_add(radius=0.2, depth=0.12, location=(0, 0, 0.06), vertices=64); b = bpy.context.active_object; b.name = "st_base"
+    md = b.modifiers.new("bev", "BEVEL"); md.width = 0.012; md.segments = 3; bpy.ops.object.modifier_apply(modifier=md.name)
+    md = b.modifiers.new("sub", "SUBSURF"); md.levels = 2; bpy.ops.object.modifier_apply(modifier=md.name)
+    for ob, col, rough, metal in ((m, (0.55, 0.3, 0.12, 1), 0.55, 0.0), (b, (0.25, 0.27, 0.3, 1), 0.35, 1.0)):
+        mat = bpy.data.materials.new(ob.name + "_mat"); mat.use_nodes = True; bs = mat.node_tree.nodes.get("Principled BSDF")
+        if bs: bs.inputs["Base Color"].default_value = col; bs.inputs["Roughness"].default_value = rough; bs.inputs["Metallic"].default_value = metal
+        ob.data.materials.append(mat)
+        for p_ in ob.data.polygons: p_.use_smooth = True
+    return {"made": ["st_head", "st_base"], "tris": int(sum(sum(len(p.vertices) - 2 for p in o.data.polygons) for o in (m, b)))}
+
+
 def approve_stage(project, stage, who="user", note=""):
     """CLI-callable approval (the self-test approves its own REVIEW items; real projects: the user)."""
     a = Project(project).approve(stage, who=who, note=note)
@@ -2448,7 +2602,7 @@ def trial_bake(project, tag, obj=None, size=1024, keep_uv=False, method="forge",
     if hook: exec(hook, globals())
     log = open(os.path.join(out, "bake_log.txt")).read()
     game_material([name], out, pre, f"M_trial_{tag}")
-    rd = P.gate_dir("trials", tag); views = [v for v in inspection_views(P.state["anatomy"]) if v[0] in TRIAL_VIEWS]
+    rd = P.gate_dir("trials", tag); views = [v for v in inspection_views(P.state["anatomy"]) if _vin(v[0], TRIAL_VIEWS)]
     hv_dir = P.gate_dir("trials", "_high")
     hl = [os.path.join(hv_dir, f"lit_{v[0]}.png") for v in views]
     if not all(os.path.exists(p) for p in hl):

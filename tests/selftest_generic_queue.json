@@ -1,0 +1,114 @@
+{
+  "blender": "filled in by run_selftest.py",
+  "projects": [
+    {
+      "project": "forge_selftest_generic",
+      "work_blend": "filled in by run_selftest.py",
+      "steps": [
+        {
+          "id": "make",
+          "fn": "selftest_make_generic",
+          "kw": {
+            "project": "forge_selftest_generic"
+          },
+          "timeout_min": 10
+        },
+        {
+          "id": "s0",
+          "fn": "s0_adopt",
+          "kw": {
+            "project": "forge_selftest_generic",
+            "high_names": [
+              "st_head",
+              "st_base"
+            ],
+            "asset": "SM_SelfTestGeneric",
+            "title": "Forge Generic Self Test",
+            "kind": "generic"
+          },
+          "verify_stage": "s0_intake",
+          "continue_on_review": true,
+          "timeout_min": 20
+        },
+        {
+          "id": "s0_ok",
+          "fn": "approve_stage",
+          "kw": {
+            "project": "forge_selftest_generic",
+            "stage": "s0_intake",
+            "who": "selftest",
+            "note": "auto"
+          },
+          "timeout_min": 5
+        },
+        {
+          "id": "fit",
+          "fn": "uniform_fit",
+          "kw": {
+            "project": "forge_selftest_generic",
+            "target_overall_m": 0.6
+          },
+          "timeout_min": 20
+        },
+        {
+          "id": "spec",
+          "fn": "s0_spec",
+          "kw": {
+            "project": "forge_selftest_generic",
+            "size_m": 0.6
+          },
+          "verify_stage": "s0_spec",
+          "continue_on_review": true,
+          "timeout_min": 20
+        },
+        {
+          "id": "spec_ok",
+          "fn": "approve_stage",
+          "kw": {
+            "project": "forge_selftest_generic",
+            "stage": "s0_spec",
+            "who": "selftest",
+            "note": "auto"
+          },
+          "timeout_min": 5
+        },
+        {
+          "id": "s1",
+          "fn": "s1_highpoly",
+          "kw": {
+            "project": "forge_selftest_generic"
+          },
+          "verify_stage": "s1_highpoly",
+          "continue_on_review": true,
+          "timeout_min": 30
+        },
+        {
+          "id": "s1_ok",
+          "fn": "approve_stage",
+          "kw": {
+            "project": "forge_selftest_generic",
+            "stage": "s1_highpoly",
+            "who": "selftest",
+            "note": "auto"
+          },
+          "timeout_min": 5
+        },
+        {
+          "id": "s2",
+          "fn": "s2_lowpoly",
+          "kw": {
+            "project": "forge_selftest_generic",
+            "target": 10000
+          },
+          "verify_stage": "s2_lowpoly",
+          "continue_on_review": true,
+          "env": {
+            "FORGE_INJECT": "s2_lowpoly:1"
+          },
+          "retries": 2,
+          "timeout_min": 60
+        }
+      ]
+    }
+  ]
+}

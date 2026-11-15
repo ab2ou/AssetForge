@@ -12,8 +12,38 @@ def _engine():
     return "BLENDER_WORKBENCH"
 
 
+# 1.6.0: a generic asset (anatomy kind "generic") has its own cameras. Each stands in for one sword camera, so the
+# stage code that picks cameras by sword name (_vin) works for both kinds.
+GENERIC_VIEW_OF = {"full_front": "front", "full_back": "back", "tip": "detail_low", "blade_mid": "three_quarter",
+                   "junction": "detail_mid", "guard_center": "detail_center", "guard_left": "left", "guard_right": "right",
+                   "guard_back": "three_quarter_back", "grip": "detail_high", "pommel": "top"}
+_SWORD_VIEW_OF = {v: k for k, v in GENERIC_VIEW_OF.items()}
+
+
+def _vin(name, names):
+    """is the camera `name` one of `names` (sword camera names)? A generic camera counts as the sword camera it replaces."""
+    return name in names or _SWORD_VIEW_OF.get(name) in names
+
+
+def generic_views(an):
+    """cameras for any asset, from its bounding box: front, back, left, right, top, two three-quarter views and four
+    close-ups (low / middle / centre / high). 50 mm lens on a 36 mm sensor, 16:9."""
+    c = tuple(an["bbox_center"]); sx, sy, sz = an["size"]
+    def fit(w, h, depth): return 1.2 * max(w / 2 / 0.36, h / 2 / 0.2025) + depth / 2
+    diag = (sx * sx + sy * sy + sz * sz) ** 0.5; dq = fit(diag, diag, 0.0); z0 = c[2] - sz / 2
+    def zc(f): return (c[0], c[1], z0 + f * sz)
+    dc = max(fit(0.55 * sx, 0.42 * sz, sy), 0.03)
+    return [("front", c, (0, -1, 0), fit(sx, sz, sy)), ("back", c, (0, 1, 0), fit(sx, sz, sy)),
+            ("detail_low", zc(0.2), (0.3, -1, 0.15), dc), ("three_quarter", c, (0.65, -0.75, 0.35), dq),
+            ("detail_mid", zc(0.5), (-0.5, -1, 0.2), dc), ("detail_center", zc(0.5), (0.12, -1, 0.05), dc),
+            ("left", c, (-1, 0, 0), fit(sy, sz, sx)), ("right", c, (1, 0, 0), fit(sy, sz, sx)),
+            ("three_quarter_back", c, (-0.65, 0.75, 0.35), dq),
+            ("detail_high", zc(0.8), (0.3, -1, 0.25), dc), ("top", c, (0, -0.12, 1), fit(sx, sy, sz))]
+
+
 def inspection_views(an):
     """camera list from the anatomy (z axis = sword length, tip low). Each: name, target, direction, dist."""
+    if an.get("kind") == "generic": return generic_views(an)
     L = an["length"]; cx, cy = an.get("axis_xy", (0.0, 0.0)); gz = (an["guard_z0"] + an["guard_z1"]) / 2
     gw = an.get("guard_half_width", 0.12)
     cl = an.get("centerline")              # 1.4.2: curved blades -> aim at the blade centreline (absent: grip axis)

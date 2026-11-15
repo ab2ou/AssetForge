@@ -20,5 +20,6 @@
 | PBR material rebuild by part (blade / guard / gem) | **to build** |
 | s6 LODs + collision, s7 export + re-import, s8 media, s9 package | wrappers of the proven tools; not yet run through forge |
 | s10 rights / Fab checklist | written |
-| other weapon types (axe, spear, dagger) | anatomy is sword-specific; **to generalise** |
+| generic assets (any model) | 1.6.0: runs s0 → s9 with bounding-box cameras and a size gate; **to do**: real AI non-weapons, part detection, generic look/listing text |
+| other weapon types (axe, spear, dagger) | anatomy is sword-specific; **to generalise** (or run them as generic) |
 | calibration on 4–5 swords | **to do** after the dragon sword |

@@ -32,7 +32,7 @@ DEFAULTS = {
     "projects_root": PATHS["projects_root"],
     "keep_checkpoints_per_stage": 2,
     "category": "hero_sword",
-    "test_projects": ["forge_selftest"],                       # untested code may only run on these (evidence first)
+    "test_projects": ["forge_selftest", "forge_selftest_generic"],                       # untested code may only run on these (evidence first)
     "allow_untested_code": False,
     "weapon": {"type": None, "style": "fantasy", "character_height_m": 1.80},
     # triangle budgets (LOD0 start, LOD0 max, LOD1 ratio, LOD2 ratio)

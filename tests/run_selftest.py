@@ -2,7 +2,7 @@
 temporary projects folder (your own projects and ledger are not touched). One crash is injected into s2 and must be
 retried automatically.
 
-    "<Blender folder>/5.2/python/bin/python.exe" tests/run_selftest.py [--blender <blender executable>] [--keep]
+    "<Blender folder>/5.2/python/bin/python.exe" tests/run_selftest.py [--generic] [--blender <blender executable>] [--keep]
 
 Exit code 0 when every step is done and the injected crash was retried. Takes a few minutes.
 """
@@ -20,7 +20,8 @@ except Exception: local = {}
 blender = opt("--blender") or local.get("blender") or os.environ.get("BLENDER") or "blender"
 root = tempfile.mkdtemp(prefix="sword_forge_selftest_"); projects = os.path.join(root, "projects")
 
-Q = json.load(open(os.path.join(HERE, "selftest_queue.json"), encoding="utf-8")); Q["blender"] = blender
+qname = "selftest_generic_queue.json" if "--generic" in args else "selftest_queue.json"   # --generic: a non-weapon asset
+Q = json.load(open(os.path.join(HERE, qname), encoding="utf-8")); Q["blender"] = blender
 for pj in Q["projects"]:
     pj["work_blend"] = os.path.join(projects, pj["project"], "work", pj["project"] + ".blend")
 qpath = os.path.join(root, "queue.json")
