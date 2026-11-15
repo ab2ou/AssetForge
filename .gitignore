@@ -1,0 +1,23 @@
+# machine settings and installed libraries (see paths.example.json, setup_forge.py)
+paths.local.json
+pylibs/
+
+# Python, editors, temporary files
+__pycache__/
+*.pyc
+*.tmp
+.vscode/
+.idea/
+
+# backups made while working
+*.before_*
+_backup*/
+
+# Blender files and exported assets never belong in the code repository
+*.blend
+*.blend[0-9]
+*.fbx
+*.glb
+*.obj
+*.zip
+*.inject_count

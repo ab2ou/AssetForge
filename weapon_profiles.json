@@ -1,0 +1,324 @@
+{
+  "_about": "Reference ranges per weapon type (SI units: metres, kilograms). Every range names its source. A range with source null is a guess: it can only produce REVIEW, never FAIL. Replace guesses with measured or sourced data (CONTRIBUTING: evidence first). 'fantasy' widens the realistic range by the style factors below, but the character-use checks (grip fits the hands, weapon not taller than the character) always apply.",
+  "character": {
+    "height_m": 1.8,
+    "hand_breadth_m": 0.089,
+    "source": "hand breadth: NASA anthropometry via healthline.com/health/average-hand-size (men 8.9 cm, women 7.9 cm); 1.80 m = common game mannequin height (guess)"
+  },
+  "styles": {
+    "realistic": {
+      "length": [
+        1.0,
+        1.0
+      ],
+      "mass": [
+        1.0,
+        1.0
+      ]
+    },
+    "fantasy": {
+      "length": [
+        0.8,
+        1.5
+      ],
+      "mass": [
+        0.6,
+        2.0
+      ],
+      "source": null,
+      "physics_review_only": true,
+      "geometry_info_only": true,
+      "physics_source": "scripts/mass_balance.py (author's research script, not in this repository) and MASTER_RULEBOOK sec. 12: fantasy = a wide warning band only for mass/balance; geometry checks stay FAIL-level (agreed with ChatGPT, 2026-10-18). Changed by the user 2026-10-27: real-world geometry ranges (overall, blade, grip, thickness) are INFO only (geometry_info_only); scale/units, grip fits the hands and size vs the character stay gates"
+    }
+  },
+  "densities": {
+    "steel": 7850,
+    "grip": 1200,
+    "wood": 600,
+    "source": "steel 7850 kg/m3 (standard value); grip 1200 = wood/leather over a steel tang (guess); wood 600 (typical ash/fir, guess)"
+  },
+  "types": {
+    "arming_sword": {
+      "family": "sword",
+      "hands": 1,
+      "overall": [
+        0.76,
+        1.0,
+        "wiktenauer.com/wiki/Arming_Sword (typical 91 cm overall, 74 cm blade, 1.1 kg); range widened (guess)"
+      ],
+      "blade": [
+        0.6,
+        0.82,
+        "same, widened (guess)"
+      ],
+      "grip": [
+        0.09,
+        0.14,
+        null
+      ],
+      "mass": [
+        0.9,
+        1.5,
+        "wiktenauer typical 1.1 kg; range widened (guess)"
+      ],
+      "pob_from_guard": [
+        0.08,
+        0.15,
+        "scripts/mass_balance.py studio range for arming swords (8-15 cm)"
+      ]
+    },
+    "longsword": {
+      "family": "sword",
+      "hands": 2,
+      "overall": [
+        1.0,
+        1.4,
+        "en.wikipedia.org/wiki/Longsword (100-140 cm)"
+      ],
+      "blade": [
+        0.8,
+        1.1,
+        "en.wikipedia.org/wiki/Longsword (80-110 cm)"
+      ],
+      "grip": [
+        0.15,
+        0.3,
+        "en.wikipedia.org/wiki/Longsword (15-30 cm)"
+      ],
+      "mass": [
+        1.1,
+        3.0,
+        "en.wikipedia.org/wiki/Longsword infobox 1.8-3 kg; lower bound 1.1 kg (guess)"
+      ],
+      "pob_from_guard": [
+        0.05,
+        0.12,
+        "scripts/mass_balance.py: HEMA guidance roughly 5-10 cm for agile longswords (studio range 5-12 cm)"
+      ],
+      "mass_note": "scripts/mass_balance.py cites Met Museum longswords 1.19-1.62 kg"
+    },
+    "greatsword": {
+      "family": "sword",
+      "hands": 2,
+      "overall": [
+        1.4,
+        1.85,
+        null
+      ],
+      "blade": [
+        1.0,
+        1.4,
+        null
+      ],
+      "grip": [
+        0.25,
+        0.5,
+        null
+      ],
+      "mass": [
+        2.0,
+        4.0,
+        null
+      ],
+      "pob_from_guard": [
+        0.05,
+        0.2,
+        null
+      ]
+    },
+    "dagger": {
+      "family": "sword",
+      "hands": 1,
+      "overall": [
+        0.25,
+        0.5,
+        "myarmoury.com/review_aa_rondel.php (replica rondel: 41 cm overall, 30.5 cm blade, 10 cm grip, 0.25 kg); range widened (guess)"
+      ],
+      "blade": [
+        0.15,
+        0.35,
+        "same, widened (guess)"
+      ],
+      "grip": [
+        0.08,
+        0.13,
+        "same, widened (guess)"
+      ],
+      "mass": [
+        0.15,
+        0.6,
+        "same, widened (guess)"
+      ],
+      "pob_from_guard": [
+        -0.03,
+        0.06,
+        null
+      ]
+    },
+    "spear": {
+      "family": "polearm",
+      "hands": 2,
+      "overall": [
+        2.0,
+        3.0,
+        "hurstwic.org viking_spear (2-3 m)"
+      ],
+      "head": [
+        0.2,
+        0.6,
+        "hurstwic.org viking_spear (heads 20-60 cm)"
+      ],
+      "shaft_diameter": [
+        0.02,
+        0.035,
+        "hurstwic.org viking_spear (2-3 cm); upper bound widened (guess)"
+      ],
+      "mass": [
+        1.2,
+        3.0,
+        null
+      ]
+    },
+    "axe_one_handed": {
+      "family": "axe",
+      "hands": 1,
+      "overall": [
+        0.45,
+        0.9,
+        "en.wikipedia.org/wiki/Battle_axe (one-handed examples ~50-85 cm)"
+      ],
+      "mass": [
+        0.5,
+        1.6,
+        "en.wikipedia.org/wiki/Battle_axe (0.5-3 kg overall; one-handed part guess)"
+      ]
+    },
+    "axe_two_handed": {
+      "family": "axe",
+      "hands": 2,
+      "overall": [
+        0.9,
+        1.7,
+        "en.wikipedia.org/wiki/Battle_axe (Dane/sparth axes up to ~150 cm)"
+      ],
+      "mass": [
+        1.0,
+        3.0,
+        "en.wikipedia.org/wiki/Battle_axe (0.5-3 kg)"
+      ]
+    },
+    "round_shield": {
+      "family": "shield",
+      "hands": 1,
+      "diameter": [
+        0.8,
+        0.94,
+        "science-and-fiction.org/swordfighting/viking_shield.html (Gokstad 90-94 cm, others 80-90 cm)"
+      ],
+      "thickness": [
+        0.006,
+        0.012,
+        "same (boards 6-12 mm)"
+      ],
+      "mass": [
+        2.1,
+        5.5,
+        "same (estimated 2.1-5.2 kg; useful shields 4.5-5.5 kg)"
+      ]
+    },
+    "sabre": {
+      "family": "sword",
+      "hands": 1,
+      "curved": true,
+      "overall": [
+        0.85,
+        1.05,
+        "guess: blade 83-84 cm (Pattern 1796 light cavalry sabre, en.wikipedia.org/wiki/Pattern_1796_light_cavalry_sabre) + ~12-15 cm hilt; widened"
+      ],
+      "blade": [
+        0.72,
+        0.9,
+        "en.wikipedia.org/wiki/Pattern_1796_light_cavalry_sabre: blade 83-84 cm; range widened (guess)"
+      ],
+      "grip": [
+        0.09,
+        0.14,
+        null
+      ],
+      "mass": [
+        0.8,
+        1.2,
+        "en.wikipedia.org/wiki/Pattern_1796_light_cavalry_sabre: trooper 0.96 kg, officer 0.83 kg; upper bound widened (guess)"
+      ],
+      "pob_from_guard": [
+        0.1,
+        0.2,
+        null
+      ]
+    },
+    "scimitar": {
+      "family": "sword",
+      "hands": 1,
+      "curved": true,
+      "aliases": [
+        "shamshir",
+        "talwar"
+      ],
+      "overall": [
+        0.82,
+        1.0,
+        "reliks.com/sabres/shamshir: Cold Steel Shamshir 92 cm overall (one replica); range widened (guess)"
+      ],
+      "blade": [
+        0.68,
+        0.88,
+        "same replica: blade 77.5 cm; range widened (guess)"
+      ],
+      "grip": [
+        0.08,
+        0.13,
+        null
+      ],
+      "mass": [
+        0.7,
+        1.2,
+        "same replica: 0.80 kg; range widened (guess)"
+      ],
+      "pob_from_guard": [
+        0.08,
+        0.2,
+        null
+      ]
+    },
+    "katana": {
+      "family": "sword",
+      "hands": 2,
+      "curved": true,
+      "overall": [
+        0.9,
+        1.15,
+        null
+      ],
+      "blade": [
+        0.6,
+        0.8,
+        "en.wikipedia.org/wiki/Katana: nagasa approx. 60-80 cm"
+      ],
+      "grip": [
+        0.22,
+        0.32,
+        null
+      ],
+      "mass": [
+        0.9,
+        1.4,
+        null
+      ],
+      "pob_from_guard": [
+        0.1,
+        0.18,
+        null
+      ]
+    }
+  }
+}

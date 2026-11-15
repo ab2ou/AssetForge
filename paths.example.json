@@ -1,0 +1,7 @@
+{
+  "_comment": "Copy to paths.local.json (or run setup_forge.py). Machine paths only: they are not part of the method.",
+  "projects_root": "D:/Forge/projects",
+  "ledger": "D:/Forge/forge_ledger.jsonl",
+  "blender": "C:/Program Files/Blender Foundation/Blender 5.2/blender.exe",
+  "pylibs": null
+}
