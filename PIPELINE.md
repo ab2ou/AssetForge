@@ -14,6 +14,18 @@ Every stage ends with a *gate*: a list of checks, each `PASS`, `FAIL` or `REVIEW
 
 This rule exists because on the Inferno Dragon Sword we baked, textured and exported a low-poly that was crumpled at stage 2, and only found out at stage 8.
 
+## Asset kinds (1.6.0)
+
+- **weapon** (default for long, thin models): anatomy (tip, blade, guard, grip, pommel), weapon specs in `s0_spec`,
+  sword cameras, part-based UV regions and gallery shots.
+- **generic** (any other model: props, vehicles, furniture, creatures...): `s0_import(project, path, kind="generic")`
+  or `kind="auto"` (the guess is a REVIEW at s0). Kept upright as imported, pivot at the centre of the base; cameras from
+  the bounding box (front, back, sides, top, three-quarter, close-ups); `s0_spec(project, size_m=...)` checks the real
+  size (largest side) and renders the model beside a character; one UV region (`body`); voxel size from the surface
+  area; gallery from the generic cameras. Every gate after s0 is the same as for swords.
+- Tested: swords (several real AI swords), a procedural model (`tests/run_selftest.py --generic`) and one real AI car
+  (s0 -> s9). Generic assets have no part detection and no automatic colour painting yet.
+
 ## How to run it
 
 **Inside Blender (MCP `execute_blender_code`, or the Scripting tab):**

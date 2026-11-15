@@ -1,5 +1,5 @@
 bl_info = {"name": "Sword Forge", "author": "Blender AI Studio", "version": (2, 1, 0), "blender": (5, 2, 0),
-           "location": "3D View > Sidebar (N) > Sword Forge", "description": "Control panel for the Sword Forge pipeline (no AI needed)",
+           "location": "3D View > Sidebar (N) > Sword Forge", "description": "Control panel for the Sword Forge pipeline: swords and any other model (no AI needed)",
            "category": "Pipeline"}
 """Sword Forge control panel 2.0 (2026-10-31).
 Control only: the production logic stays in forge/*.py. Every stage runs in a separate headless Blender through the
@@ -65,8 +65,8 @@ def _projects(self, ctx):
 
 
 def _scene_groups(ctx):
-    """mesh objects in the currently open .blend, grouped by topmost ancestor (one entry = one weapon/import).
-    Lets 'Create + import' use a weapon that is already open instead of only a file on disk (several weapons
+    """mesh objects in the currently open .blend, grouped by topmost ancestor (one entry = one model/import).
+    Lets 'Create + import' use a model that is already open instead of only a file on disk (several weapons
     are often open together, e.g. to compare before deciding which becomes a project)."""
     groups = {}
     for o in bpy.data.objects:
@@ -203,7 +203,7 @@ class FORGE_Props(bpy.types.PropertyGroup):
     new_name: bpy.props.StringProperty(name="New project", description="folder name, lower_case_with_underscores")
     source: bpy.props.StringProperty(name="AI file", subtype="FILE_PATH", description="GLB / GLTF / FBX / OBJ from the generator")
     import_source: bpy.props.EnumProperty(name="Source", items=[("FILE", "From a file", ""), ("SCENE", "Already open in this Blender", "")], default="FILE")
-    scene_root: bpy.props.EnumProperty(name="Weapon", items=_scene_candidates)
+    scene_root: bpy.props.EnumProperty(name="Model", items=_scene_candidates)
     title: bpy.props.StringProperty(name="Title", description="product title (README, package)")
     weapon_type: bpy.props.EnumProperty(name="Type", items=_weapon_types)
     style: bpy.props.EnumProperty(name="Style", items=[("fantasy", "fantasy", ""), ("realistic", "realistic", "")])
@@ -218,7 +218,7 @@ class FORGE_Props(bpy.types.PropertyGroup):
 
 class FORGE_OT_new(bpy.types.Operator):
     bl_idname = "forge.new_project"; bl_label = "Create + import"
-    bl_description = "new project folder, then import (a file, or a weapon already open in this Blender)"
+    bl_description = "new project folder, then import (a file, or a model already open in this Blender)"
 
     def execute(self, ctx):
         f = ctx.scene.forge; n = f.new_name.strip().lower().replace(" ", "_")
@@ -229,7 +229,7 @@ class FORGE_OT_new(bpy.types.Operator):
             groups = _scene_groups(ctx)
             if not groups: self.report({"ERROR"}, "no mesh objects open in this Blender"); return {"CANCELLED"}
             root = f.scene_root if f.scene_root in groups else (next(iter(groups)) if len(groups) == 1 else None)
-            if not root: self.report({"ERROR"}, "more than one weapon is open: pick which one"); return {"CANCELLED"}
+            if not root: self.report({"ERROR"}, "more than one model is open: pick which one"); return {"CANCELLED"}
             names = groups[root]
             work = os.path.join(PROJECTS, n, "work", n + ".blend"); os.makedirs(os.path.dirname(work), exist_ok=True)
             dup = []

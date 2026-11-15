@@ -11,7 +11,7 @@ README = """{title}
 Formats in this archive: {fmt}
 Units: metres in Blender/GLB/OBJ, FBX exported with unit scale (imports at {h} m in Unreal/Unity).
 Axes: Z-up in Blender; FBX/GLB/OBJ converted to each format's convention.
-Pivot: grip (hand position).
+Pivot: {pivot}.
 LODs: LOD0 {l0} tris, LOD1 {l1} tris, LOD2 {l2} tris. Collision: UCX_* convex hulls in the LOD0 FBX.
 Textures: PBR metal/roughness. ORM = R AO, G Roughness, B Metallic. Normal = OpenGL (Blender/Unity),
 Normal_DX = DirectX (Unreal). {emissive}
@@ -27,7 +27,7 @@ EMISSIVE = {True: "Emissive = the glowing parts; suggested emissive intensity 3-
 
 
 def package(root, out_dir, base="InfernoDragonSword", title="Inferno Dragon Sword", tris=(47561, 22000, 11000), height_m=1.26,
-            emissive=True):
+            emissive=True, pivot="grip (hand position)"):
     """emissive: True when the Emissive map has glowing texels (1.4.2: the README always said 'lava and gem')."""
     os.makedirs(out_dir, exist_ok=True)
     out = {}
@@ -47,6 +47,6 @@ def package(root, out_dir, base="InfernoDragonSword", title="Inferno Dragon Swor
             texfiles = (", ".join(tex) + f" ({' and '.join(sizes)})") if fmt != "GLB" else \
                 ("BaseColor, ORM, Normal and Emissive are embedded in the GLB (4K)" if emissive else "BaseColor, ORM and Normal are embedded in the GLB (4K)")
             zf.writestr(f"{base}/README.txt", README.format(title=title, fmt=fmt, h=f"{height_m:.2f}", l0=f"{tris[0]:,}", l1=f"{tris[1]:,}", l2=f"{tris[2]:,}",
-                                                            texfiles=texfiles, extra=extra, emissive=EMISSIVE[bool(emissive)]))
+                                                            texfiles=texfiles, extra=extra, emissive=EMISSIVE[bool(emissive)], pivot=pivot))
         out[os.path.basename(z)] = round(os.path.getsize(z) / 1e6, 1)
     return out

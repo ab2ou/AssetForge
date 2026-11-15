@@ -303,3 +303,12 @@ at 22k), quad display topology (tested after 1.4.2: rejected, LESSON 59), the re
   holes capped first when the rebuild would lose surface; new s1 check `cleanup_kept_shape` (REVIEW above 0.5 % lost, FAIL above 5 %).
 - Tested s0 → s9 on a procedural non-weapon (`selftest_make_generic`, `tests/run_selftest.py --generic`). Swords: identical numbers on silver_fang.
 - Known limits: not yet run on a real AI-generated non-weapon; no part detection for generic assets (one region); look painting and listing text are still written for swords.
+
+## 1.6.1 (2026-11-15) — fixes from the first real non-weapon (tripo_car, an AI car, s0 → s9)
+- Buyer README in every zip: the pivot line follows the asset kind ("centre of the base" for generic assets; it said "grip" for the car).
+- s8 gallery brightness: with no usable BaseColor (a model without colour) the check measures absolute brightness instead of
+  turning every image into REVIEW without a measurement.
+- s0_intake: new REVIEW check `has_material` - a model without any material bakes to a grey asset (only Normal / AO carry detail).
+- `lib/listing_writer_v5.py`: the description, tags and category are parameters (one sword's description and tags were hard-coded);
+  pivot and emissive lines are no longer sword-specific.
+- Add-on and docs speak of models, not only weapons; PIPELINE.md "Asset kinds".

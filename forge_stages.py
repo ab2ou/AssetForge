@@ -161,6 +161,9 @@ def s0_adopt(project, high_names, asset=None, anatomy=None, title=None, kind=Non
     if not _b or not os.path.exists(_b) or P.state["settings"].get("design_baseline_names") != list(high_names):
         G.data["design_baseline"] = _write_baseline(P, list(high_names))   # the design as it came in (design_check)
     P.save()
+    mats_ = sorted({s.material.name for n in high_names for s in bpy.data.objects[n].material_slots if s.material})
+    G.check("has_material", len(mats_), bool(mats_), review=True,          # 1.6.1 (tripo_car: no material -> grey product)
+            msg="no material on the model: the bake will have no colour (only Normal / AO); texture it or accept a grey asset")
     G.check("asset_kind", st_["kind"], not st_.get("kind_auto"), review=True,
             msg="chosen from the proportions (long and thin = weapon, else generic): confirm it, or import again with kind=...")
     if generic:
@@ -2206,6 +2209,11 @@ def s8_media_check(project):
     for f in pngs:
         if "wire" in f: continue
         lum, cov = _product_brightness(os.path.join(out, f)); ratio = lum / alb if alb else None
+        if ratio is None:                  # 1.6.1: no usable BaseColor (asset without colour): absolute brightness
+            G.check("brightness_" + f, {"lum": round(lum, 3), "vs_albedo": None, "cover": round(cov, 3)},
+                    bool(lum >= 0.12 and cov >= 0.01), review=True,
+                    msg="no BaseColor to compare with: product luminance >= 0.12 and >= 1 % of the frame; else lights/exposure are off")
+            continue
         G.check("brightness_" + f, {"lum": round(lum, 3), "vs_albedo": ratio and round(ratio, 2), "cover": round(cov, 3)},
                 bool(ratio and ratio >= 0.6 and cov >= 0.01), review=True,
                 msg="lit product as bright as >= 60 % of its BaseColor and >= 1 % of the frame; else lights/exposure are off")
@@ -2308,7 +2316,8 @@ def s9_package(project, title=None, price=19.99):
     G.check("textures_2k", len(n2), n2 == n4, msg="every 4K map has a 2K copy")
     emi = _map_has_signal(os.path.join(root, "Textures", "4K", f"{P.state['settings'].get('tex_prefix', 'T_' + base[3:])}_Emissive.png"))
     G.data["emissive_used"] = emi
-    rep = package(root, pk, base=title.replace(" ", ""), title=title, tris=tris, height_m=P.state["anatomy"].get("height", P.state["anatomy"]["length"]), emissive=emi)
+    rep = package(root, pk, base=title.replace(" ", ""), title=title, tris=tris, height_m=P.state["anatomy"].get("height", P.state["anatomy"]["length"]), emissive=emi,
+                  pivot="centre of the base" if P.state["anatomy"].get("kind") == "generic" else "grip (hand position)")
     G.data.update(package=rep, blend=blend, textures_2k_made=made2k)
     zips = [f for f in os.listdir(pk) if f.endswith(".zip")]
     G.check("zips", len(zips), len(zips) >= 2)

@@ -156,21 +156,21 @@
    }
   },
   "lib/fab_package_v4.py": {
-   "md5": "4673a0d95ce9fd1923ef20466d61aabd",
-   "experiment": "exp_20261115_145611_acd6",
-   "t": "2026-11-15 14:56",
+   "md5": "88ab0a27ce8297ffaa187ebf0b85673e",
+   "experiment": "exp_20261115_214502_e2be",
+   "t": "2026-11-15 21:45",
    "funcs": {
-    "package": "19b5792cc76cc5d7aedbf764d3175bff",
-    "<module>": "1c205d6b19dc230c579d4c2573a46836"
+    "package": "acf84be43208e888033f8a1907db968e",
+    "<module>": "0fa06dd78d633a4419feed6e73e43be6"
    }
   },
   "lib/listing_writer_v5.py": {
-   "md5": "fca86ec3ed313e30d9e7f737742bf216",
-   "experiment": "exp_20261115_145611_acd6",
-   "t": "2026-11-15 14:56",
+   "md5": "ee84799adcbfe54d9e86b32f10e306d0",
+   "experiment": "exp_20261115_214502_e2be",
+   "t": "2026-11-15 21:45",
    "funcs": {
-    "write_listing": "1d0661f32f28700c0c9e0a0039521ae9",
-    "<module>": "b43f92b90cd2d4e2ad5b6f1dc236a0c0"
+    "write_listing": "026f80b0a0f087b186d04baf569ed8f9",
+    "<module>": "0ef63e12221225713d027ff2da06a72c"
    }
   },
   "lib/seam_normals.py": {
@@ -289,9 +289,9 @@
    }
   },
   "forge_stages.py": {
-   "md5": "71680ae9de20fbfe9d1970bfb9fb52b2",
-   "experiment": "exp_20261115_202550_5e9c",
-   "t": "2026-11-15 20:25",
+   "md5": "34257c8817fac72793e288c516dbad93",
+   "experiment": "exp_20261115_214502_e2be",
+   "t": "2026-11-15 21:45",
    "funcs": {
     "_proj": "12d10594af6401dd92449c9c0d4b6744",
     "_asset": "f548f4fe45c353c732ce9b6e14338466",
@@ -304,7 +304,7 @@
     "_detect": "72eba81e604a1354eb3cbf278afd5aa2",
     "refresh_anatomy_geometry": "6430ce493268b28c3570889815759e0f",
     "_link_orphans": "cafb0e3d45a4acbc1fbc93bf6e348007",
-    "s0_adopt": "be02e168ddbae047231a1f36ffe0f143",
+    "s0_adopt": "60f6e40780edc74a9831c26629675f8b",
     "_import_normalised": "137c943d03c6ddc624226cb21bc929ef",
     "_incons_faces": "4b66678ad8c262b8a12449d3ecce7f70",
     "_blender_voxel": "d932a4133f66cff8f8499c4d4876aaa6",
@@ -393,11 +393,11 @@
     "_product_brightness": "ed2296f6e2486d4a889216655b2d8948",
     "s8_media": "a7b1bee9faaf58b2c92b41b025e90ad6",
     "_jpeg_from_png": "e9efb3dc227d2af7ef4e194cf93e9662",
-    "s8_media_check": "90a117a730aaf3c2bcd095df3b62fb6f",
+    "s8_media_check": "87ae50888ccfc4b81f8fc750ebcf3da9",
     "_blend_scene_file": "5a4edddf0d59caa6f67021b8706080a9",
     "_textures_2k": "7398dc5b70761b9f1e961b88c82f0728",
     "_map_has_signal": "49be4ee3478d375bec5b38b6353b9ec8",
-    "s9_package": "ef7aa809e8d67a8be58e2ce6f8512d12",
+    "s9_package": "3694eaf284d85712331c34d9fac73b8e",
     "_joined_high_copy": "ec1baf8e1c94b4555bc58f94f5ce37a5",
     "_apply": "2f175fd9e8199dd71e10c860ea25701b",
     "_collapse": "585e4617ef4c6a21cc0f2b9305f9c2a0",

@@ -18,4 +18,5 @@
 > 7. Evidence first: never change the code, thresholds or reference data because of general knowledge. Try the change on `forge_selftest`, measure before/after, and call `record_experiment(...)`; untested files are refused on real projects. Untested opinions go to `record_lesson("idea", ...)`.
 > 8. Before s1, run `s0_spec(project, weapon_type=..., style="fantasy"|"realistic")`: it checks that the model is a usable weapon of its type (length, blade/grip, mass, balance, grip vs hands, size vs a character).
 > 9. Model routing (MODEL_ROUTING.md): split each order into tasks; mechanical checks -> small model / low effort, routine recipe work -> medium, visual review / decisions / new code -> strongest model / high effort. Verify every helper result before reporting it.
+> 9b. Not a sword? Import it with `kind="generic"` (see PIPELINE.md, "Asset kinds"): same gates, bounding-box cameras, size check instead of weapon specs.
 > 10. Projects live in `<projects>\<name>\`. Code lives in `<forge>\`. Settings and thresholds are in `forge\config.json` (families: straight_simple, curved, ornate).
